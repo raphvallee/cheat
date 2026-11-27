@@ -136,6 +136,13 @@ public final class Panel {
         return false;
     }
 
+    public boolean charTyped(int codepoint) {
+        for (ModuleButton button : buttons) {
+            if (button.charTyped(codepoint)) return true;
+        }
+        return false;
+    }
+
     public boolean isListening() {
         for (ModuleButton button : buttons) {
             if (button.isListening()) return true;

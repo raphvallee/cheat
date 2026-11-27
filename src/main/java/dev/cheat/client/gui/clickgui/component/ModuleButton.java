@@ -118,9 +118,20 @@ public final class ModuleButton extends GuiElement {
         return null;
     }
 
-    public boolean isListening() {
+    @Override
+    public boolean charTyped(int codepoint) {
+        if (!expanded) return false;
         for (GuiElement child : children) {
-            if (child instanceof BindElement bind && bind.isListening()) return true;
+            if (child.isVisible() && child.charTyped(codepoint)) return true;
+        }
+        return false;
+    }
+
+    @Override
+    public boolean isListening() {
+        if (!expanded) return false;
+        for (GuiElement child : children) {
+            if (child.isVisible() && child.isListening()) return true;
         }
         return false;
     }

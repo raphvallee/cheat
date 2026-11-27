@@ -40,6 +40,16 @@ public abstract class GuiElement {
         return false;
     }
 
+    /** @return true when the typed character was used (e.g. while editing a text field) */
+    public boolean charTyped(int codepoint) {
+        return false;
+    }
+
+    /** True while this row captures the keyboard (waiting for a bind, editing a value). */
+    public boolean isListening() {
+        return false;
+    }
+
     public boolean isVisible() {
         return true;
     }

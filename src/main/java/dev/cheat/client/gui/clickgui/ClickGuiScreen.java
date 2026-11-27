@@ -7,6 +7,7 @@ import dev.cheat.client.module.impl.client.ClickGuiModule;
 import dev.cheat.client.util.RenderUtil;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
@@ -19,13 +20,20 @@ import java.util.List;
  * Left click a module to toggle it, right click it to edit its settings and key bind.
  *
  * <p>Everything is drawn in a virtual coordinate space scaled by {@link #scale()}, so the GUI keeps the same
- * size whatever the game's GUI scale is. Mouse positions are converted with {@link #toVirtual}.</p>
+ * size whatever the game's GUI scale is. Mouse positions are converted with {@link #toVirtual}. The scale is
+ * capped so that a panel always fits in the window, and panels are pulled back on screen when it changes.</p>
  */
 public final class ClickGuiScreen extends Screen {
     private static final int REFERENCE_GUI_SCALE = 2;
+    private static final int MARGIN = 6;
+    /** Smallest virtual area the GUI needs: one panel with a few rows, plus margins. */
+    private static final int MIN_VIRTUAL_WIDTH = Theme.PANEL_WIDTH + MARGIN * 2;
+    private static final int MIN_VIRTUAL_HEIGHT = Theme.HEADER_HEIGHT + Theme.MODULE_HEIGHT * 3 + MARGIN * 2;
 
     private final ClickGuiModule module;
     private final List<Panel> panels = new ArrayList<>();
+    /** Scale the layout was last fitted for; the panels are fitted again when it changes. */
+    private float layoutScale = Float.NaN;
 
     public ClickGuiScreen(ClickGuiModule module) {
         super(Component.literal(Client.NAME + " ClickGUI"));
@@ -36,8 +44,11 @@ public final class ClickGuiScreen extends Screen {
         }
     }
 
+    /** The configured scale, lowered when needed so that the GUI cannot be larger than the window. */
     private float scale() {
-        return (float) (module.scale.getDouble() * REFERENCE_GUI_SCALE / minecraft.getWindow().getGuiScale());
+        float requested = (float) (module.scale.getDouble() * REFERENCE_GUI_SCALE / minecraft.getWindow().getGuiScale());
+        float fit = Math.min((float) width / MIN_VIRTUAL_WIDTH, (float) height / MIN_VIRTUAL_HEIGHT);
+        return fit > 0 ? Math.min(requested, fit) : requested;
     }
 
     private double toVirtual(double screenCoordinate) {
@@ -54,20 +65,26 @@ public final class ClickGuiScreen extends Screen {
 
     @Override
     protected void init() {
-        // If a saved/default layout does not fit this window, flow the panels into rows that do.
+        fitLayout();
+    }
+
+    /** If the saved/default layout does not fit the window at the current scale, flow the panels into rows that do. */
+    private void fitLayout() {
+        layoutScale = scale();
         int vw = virtualWidth();
         int vh = virtualHeight();
-        boolean outside = panels.stream().anyMatch(p -> p.x() + Theme.PANEL_WIDTH > vw || p.y() + Theme.HEADER_HEIGHT > vh);
+        boolean outside = panels.stream().anyMatch(p -> p.x() < 0 || p.y() < 0
+                || p.x() + Theme.PANEL_WIDTH > vw || p.y() + Theme.HEADER_HEIGHT > vh);
         if (!outside) return;
-        int x = 6;
-        int y = 6;
+        int x = MARGIN;
+        int y = MARGIN;
         for (Panel panel : panels) {
             if (x + Theme.PANEL_WIDTH > vw) {
-                x = 6;
+                x = MARGIN;
                 y += Theme.HEADER_HEIGHT + Theme.MODULE_HEIGHT * 3 + 10;
             }
-            panel.moveTo(x, Math.min(y, Math.max(0, vh - Theme.HEADER_HEIGHT)));
-            x += Theme.PANEL_WIDTH + 6;
+            panel.moveTo(x, Math.max(0, Math.min(y, vh - Theme.HEADER_HEIGHT)));
+            x += Theme.PANEL_WIDTH + MARGIN;
         }
     }
 
@@ -80,6 +97,7 @@ public final class ClickGuiScreen extends Screen {
     @Override
     public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
         float scale = scale();
+        if (scale != layoutScale) fitLayout();
         int mx = (int) toVirtual(mouseX);
         int my = (int) toVirtual(mouseY);
         int vw = virtualWidth();
@@ -157,6 +175,14 @@ public final class ClickGuiScreen extends Screen {
             }
         }
         return super.keyPressed(event);
+    }
+
+    @Override
+    public boolean charTyped(CharacterEvent event) {
+        for (Panel panel : panels) {
+            if (panel.isListening()) return panel.charTyped(event.codepoint());
+        }
+        return super.charTyped(event);
     }
 
     @Override
