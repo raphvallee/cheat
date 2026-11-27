@@ -11,6 +11,7 @@ public final class NumberSetting extends Setting<Double> {
     private final double max;
     private final double step;
     private String suffix = "";
+    private boolean typed;
 
     public NumberSetting(String name, double defaultValue, double min, double max, double step) {
         super(name, defaultValue);
@@ -25,6 +26,19 @@ public final class NumberSetting extends Setting<Double> {
     public NumberSetting withSuffix(String suffix) {
         this.suffix = suffix;
         return this;
+    }
+
+    /**
+     * Edit this value in the ClickGUI by typing a number instead of dragging a slider.
+     * Use it for values that should only change once confirmed, such as the GUI scale.
+     */
+    public NumberSetting typed() {
+        this.typed = true;
+        return this;
+    }
+
+    public boolean isTyped() {
+        return typed;
     }
 
     @Override
@@ -81,7 +95,7 @@ public final class NumberSetting extends Setting<Double> {
     @Override
     public void parse(String input) {
         try {
-            set(Double.parseDouble(input));
+            set(Double.parseDouble(input.trim().replace(',', '.')));
         } catch (NumberFormatException e) {
             throw new IllegalArgumentException("Expected a number between " + min + " and " + max);
         }

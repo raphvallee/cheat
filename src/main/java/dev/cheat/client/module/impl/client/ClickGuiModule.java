@@ -20,8 +20,8 @@ public final class ClickGuiModule extends Module {
     public final ColorSetting accent = color("Accent", 0xFF4FA3FF);
     public final BooleanSetting rainbow = bool("Rainbow", false);
     public final NumberSetting rainbowSpeed = number("Rainbow speed", 1, 0.1, 5, 0.1).visibleIf(rainbow::isEnabled);
-    public final NumberSetting scale = number("Scale", 1, 0.5, 2, 0.05)
-            .describedAs("Size of the GUI; stays the same whatever the game's GUI scale is.");
+    public final NumberSetting scale = number("Scale", 1, 0.5, 2, 0.05).typed()
+            .describedAs("Size of the GUI; stays the same whatever the game's GUI scale is. Capped to fit the window.");
     public final BooleanSetting blur = bool("Blur", false);
     public final BooleanSetting descriptions = bool("Descriptions", true);
 

@@ -39,6 +39,7 @@ The client name, version and Minecraft version are set in `gradle.properties`.
   - Left-click a module to toggle it. Right-click it to show its settings and key bind.
   - Drag a panel by its header. Right-click a header to collapse the panel.
   - Scroll to move through long panels. Right-click a slider to reset it.
+  - Set the GUI size with ClickGUI > Scale: click the value, type a number (0.5-2) and press Enter. The scale is capped so the GUI always fits in the window.
 - Chat commands use the `.` prefix:
   - `.help`
   - `.t <module>` toggles a module.

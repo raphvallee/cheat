@@ -16,6 +16,7 @@ public final class BindElement extends GuiElement {
         this.module = module;
     }
 
+    @Override
     public boolean isListening() {
         return listening;
     }
