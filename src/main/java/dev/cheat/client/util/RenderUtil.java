@@ -3,6 +3,7 @@ package dev.cheat.client.util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.gizmos.GizmoProperties;
 import net.minecraft.gizmos.GizmoStyle;
 import net.minecraft.gizmos.Gizmos;
 import net.minecraft.util.Mth;
@@ -59,11 +60,25 @@ public final class RenderUtil {
     }
 
     public static void box(AABB box, int color, float lineWidth) {
-        Gizmos.cuboid(box, GizmoStyle.stroke(color, lineWidth));
+        box(box, color, lineWidth, false);
+    }
+
+    /** @param throughWalls draw on top of the world instead of being hidden by blocks */
+    public static void box(AABB box, int color, float lineWidth, boolean throughWalls) {
+        onTop(Gizmos.cuboid(box, GizmoStyle.stroke(color, lineWidth)), throughWalls);
     }
 
     public static void filledBox(AABB box, int lineColor, float lineWidth, int fillColor) {
-        Gizmos.cuboid(box, GizmoStyle.strokeAndFill(lineColor, lineWidth, fillColor));
+        filledBox(box, lineColor, lineWidth, fillColor, false);
+    }
+
+    /** @param throughWalls draw on top of the world instead of being hidden by blocks */
+    public static void filledBox(AABB box, int lineColor, float lineWidth, int fillColor, boolean throughWalls) {
+        onTop(Gizmos.cuboid(box, GizmoStyle.strokeAndFill(lineColor, lineWidth, fillColor)), throughWalls);
+    }
+
+    private static void onTop(GizmoProperties properties, boolean throughWalls) {
+        if (throughWalls) properties.setAlwaysOnTop();
     }
 
     public static void line(Vec3 from, Vec3 to, int color, float lineWidth) {

@@ -20,6 +20,7 @@ public final class Esp extends Module {
     private final BooleanSetting players = bool("Players", true);
     private final BooleanSetting mobs = bool("Mobs", false);
     private final BooleanSetting items = bool("Items", false);
+    private final BooleanSetting throughWalls = bool("Through walls", true);
     private final ColorSetting color = color("Color", 0xFF55AAFF);
     private final NumberSetting lineWidth = number("Line width", 2, 1, 6, 0.5);
     private final BooleanSetting fill = bool("Fill", false);
@@ -36,9 +37,9 @@ public final class Esp extends Module {
             AABB box = RenderUtil.interpolatedBox(entity, event.getPartialTicks());
             if (fill.isEnabled()) {
                 RenderUtil.filledBox(box, color.getArgb(), lineWidth.getFloat(),
-                        ColorUtil.withAlpha(color.getArgb(), fillAlpha.getInt()));
+                        ColorUtil.withAlpha(color.getArgb(), fillAlpha.getInt()), throughWalls.isEnabled());
             } else {
-                RenderUtil.box(box, color.getArgb(), lineWidth.getFloat());
+                RenderUtil.box(box, color.getArgb(), lineWidth.getFloat(), throughWalls.isEnabled());
             }
         }
     }
