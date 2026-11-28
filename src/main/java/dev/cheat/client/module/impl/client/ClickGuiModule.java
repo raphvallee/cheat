@@ -52,7 +52,13 @@ public final class ClickGuiModule extends Module {
     @Override
     protected void onEnable() {
         // Acts like a button: open the screen and switch straight back off.
-        if (mc.gui.screen() == null) mc.gui.setScreen(new ClickGuiScreen(this));
+        if (mc.gui.screen() == null) {
+            mc.gui.setScreen(new ClickGuiScreen(this));
+        } else {
+            mc.schedule(() -> {
+                if (mc.gui.screen() == null) mc.gui.setScreen(new ClickGuiScreen(this));
+            });
+        }
         setEnabled(false);
     }
 
@@ -63,7 +69,7 @@ public final class ClickGuiModule extends Module {
     /** Accent color for GUI and HUD; {@code offset} shifts the rainbow phase. */
     public int accentColor(long offset) {
         if (!rainbow.isEnabled()) return accent.getArgb();
-        return ColorUtil.rainbow((long) (offset / rainbowSpeed.getDouble()), 0.6f, 1f);
+        return ColorUtil.rainbow(offset, rainbowSpeed.getDouble(), 0.6f, 1f);
     }
 
     /** Accent color of the running client (works from anywhere after startup). */

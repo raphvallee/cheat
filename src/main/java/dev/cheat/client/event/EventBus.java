@@ -69,8 +69,8 @@ public final class EventBus {
 
     /** Posts {@code event} to its handlers in priority order and returns it. */
     public <T extends Event> T post(T event) {
-        List<Handler> list = handlers.get(event.getClass());
-        if (list == null || list.isEmpty()) return event;
+        List<Handler> list = handlersFor(event.getClass());
+        if (list.isEmpty()) return event;
         CancellableEvent cancellable = event instanceof CancellableEvent c ? c : null;
         for (Handler handler : list) {
             if (cancellable != null && cancellable.isCancelled() && !handler.receiveCancelled()) continue;
@@ -85,6 +85,26 @@ public final class EventBus {
             }
         }
         return event;
+    }
+
+    private List<Handler> handlersFor(Class<?> type) {
+        List<Handler> single = null;
+        List<Handler> merged = null;
+        for (Class<?> c = type; c != null && Event.class.isAssignableFrom(c); c = c.getSuperclass()) {
+            List<Handler> list = handlers.get(c);
+            if (list == null || list.isEmpty()) continue;
+            if (single == null) {
+                single = list;
+            } else {
+                if (merged == null) merged = new ArrayList<>(single);
+                merged.addAll(list);
+            }
+        }
+        if (merged != null) {
+            merged.sort((a, b) -> Integer.compare(b.priority(), a.priority()));
+            return merged;
+        }
+        return single == null ? List.of() : single;
     }
 
     private List<Method> scan(Class<?> type) {

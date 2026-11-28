@@ -14,7 +14,7 @@ import java.util.Properties;
 
 /**
  * Client entry point. Created once from {@link dev.cheat.client.hook.Hooks#onStartup} at the end of the
- * {@link Minecraft} constructor and shut down from {@link Minecraft#close()}.
+ * {@link Minecraft} constructor and shut down from {@link Minecraft#close()} or when the game crashes.
  */
 public final class Client {
     public static final String NAME;

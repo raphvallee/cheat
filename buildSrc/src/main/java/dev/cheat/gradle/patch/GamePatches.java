@@ -28,6 +28,8 @@ public final class GamePatches {
                         .at(At.RETURN).call("onStartup"),
                 Injection.into(MINECRAFT).method("close", "()V")
                         .at(At.HEAD).call("onShutdown"),
+                Injection.into(MINECRAFT).method("emergencySaveAndCrash", "(Lnet/minecraft/CrashReport;)V")
+                        .at(At.HEAD).call("onCrash"),
 
                 // Game loop
                 Injection.into(MINECRAFT).method("tick", "()V")
@@ -43,7 +45,9 @@ public final class GamePatches {
 
                 // World changes
                 Injection.into(MINECRAFT).method("setLevel", "(Lnet/minecraft/client/multiplayer/ClientLevel;)V")
-                        .at(At.HEAD).call("onSetLevel"),
+                        .at(At.RETURN).call("onSetLevel"),
+                Injection.into(MINECRAFT).method("disconnect", "(Lnet/minecraft/client/gui/screens/Screen;ZZ)V")
+                        .at(At.HEAD).call("onDisconnect"),
                 Injection.into(MINECRAFT).method("clearClientLevel", "(Lnet/minecraft/client/gui/screens/Screen;)V")
                         .at(At.HEAD).call("onClearLevel"),
 
@@ -63,9 +67,9 @@ public final class GamePatches {
                 // Player
                 Injection.into(LOCAL_PLAYER).method("tick", "()V")
                         .at(At.HEAD).call("onPlayerTick"),
-                Injection.into(LOCAL_PLAYER).method("sendPosition", "()V")
-                        .at(At.HEAD).call("onMotionPre"),
-                Injection.into(LOCAL_PLAYER).method("sendPosition", "()V")
+                Injection.into(LOCAL_PLAYER).method("sendChanges", "()V")
+                        .beforeInvoke(LOCAL_PLAYER, "isPassenger", "()Z").call("onMotionPre"),
+                Injection.into(LOCAL_PLAYER).method("sendChanges", "()V")
                         .at(At.RETURN).call("onMotionPost"),
 
                 // Network
@@ -75,6 +79,9 @@ public final class GamePatches {
                 Injection.into(CONNECTION)
                         .method("channelRead0", "(Lio/netty/channel/ChannelHandlerContext;Lnet/minecraft/network/protocol/Packet;)V")
                         .at(At.HEAD).cancellable().call("onPacketReceive"),
+                Injection.into("net/minecraft/client/multiplayer/ClientPacketListener")
+                        .method("handleBundlePacket", "(Lnet/minecraft/network/protocol/game/ClientboundBundlePacket;)V")
+                        .at(At.HEAD).cancellable().call("onBundlePacket"),
 
                 // Chat (client commands)
                 Injection.into("net/minecraft/client/gui/screens/ChatScreen")

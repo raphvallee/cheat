@@ -4,7 +4,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.protocol.Packet;
 
-/** Packet helpers. */
 public final class PacketUtil {
     private static final ThreadLocal<int[]> SILENT_DEPTH = ThreadLocal.withInitial(() -> new int[1]);
 

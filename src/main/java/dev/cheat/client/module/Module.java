@@ -42,6 +42,8 @@ public abstract class Module implements MinecraftInstance {
     private boolean enabled;
     private boolean hidden;
     private boolean enabledByDefault;
+    private int defaultKey;
+    private boolean hiddenByDefault;
 
     protected Module(String name, String description, Category category) {
         this(name, description, category, KeyUtil.NONE);
@@ -158,6 +160,19 @@ public abstract class Module implements MinecraftInstance {
 
     public boolean isEnabledByDefault() {
         return enabledByDefault;
+    }
+
+    final void captureDefaults() {
+        defaultKey = key;
+        hiddenByDefault = hidden;
+    }
+
+    public int getDefaultKey() {
+        return defaultKey;
+    }
+
+    public boolean isHiddenByDefault() {
+        return hiddenByDefault;
     }
 
     /** Hidden modules are not shown in the HUD module list. */

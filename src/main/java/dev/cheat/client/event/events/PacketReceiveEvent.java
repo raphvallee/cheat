@@ -7,7 +7,8 @@ import net.minecraft.network.protocol.Packet;
  * Fired when a packet arrives from the server, before vanilla handles it. Cancel to drop it.
  *
  * <p><b>Threading:</b> posted on the Netty network thread. Do not touch the world here; read the packet and
- * schedule work with {@code Minecraft.getInstance().execute(...)} when needed.</p>
+ * schedule work with {@code Minecraft.getInstance().execute(...)} when needed. Packets inside a bundle are
+ * posted one by one on the client thread.</p>
  */
 public final class PacketReceiveEvent extends CancellableEvent {
     private final Packet<?> packet;

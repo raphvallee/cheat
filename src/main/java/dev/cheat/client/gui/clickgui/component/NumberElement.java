@@ -35,7 +35,6 @@ public final class NumberElement extends SettingElement<NumberSetting> {
             nameAndValue(g, value, input == null ? Theme.TEXT_DIM : Theme.accent());
             return;
         }
-        if (dragging) update(mouseX);
         background(g, mouseX, mouseY);
         nameAndValue(g, setting.display(), Theme.TEXT_DIM);
         int trackX = x + Theme.PADDING + 2;
@@ -82,6 +81,17 @@ public final class NumberElement extends SettingElement<NumberSetting> {
     }
 
     @Override
+    public void mouseMoved(double mouseX, double mouseY) {
+        if (dragging) update(mouseX);
+    }
+
+    @Override
+    public void defocus() {
+        dragging = false;
+        commit();
+    }
+
+    @Override
     public boolean isListening() {
         return input != null;
     }
@@ -107,7 +117,10 @@ public final class NumberElement extends SettingElement<NumberSetting> {
         if (input == null) return false;
         boolean digit = codepoint >= '0' && codepoint <= '9';
         boolean separator = (codepoint == '.' || codepoint == ',') && input.indexOf('.') < 0;
-        if ((digit || separator) && input.length() < MAX_INPUT_LENGTH) input += digit ? (char) codepoint : '.';
+        boolean minus = codepoint == '-' && input.isEmpty() && setting.getMin() < 0;
+        if ((digit || separator || minus) && input.length() < MAX_INPUT_LENGTH) {
+            input += separator ? '.' : String.valueOf((char) codepoint);
+        }
         return true;
     }
 
@@ -116,7 +129,7 @@ public final class NumberElement extends SettingElement<NumberSetting> {
         if (input == null) return;
         String typed = input;
         input = null;
-        if (typed.isEmpty() || typed.equals(".")) return;
+        if (typed.isEmpty() || typed.equals(".") || typed.equals("-") || typed.equals("-.")) return;
         try {
             setting.parse(typed);
         } catch (IllegalArgumentException ignored) {

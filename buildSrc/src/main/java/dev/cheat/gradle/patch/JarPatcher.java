@@ -11,8 +11,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileSystemException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -36,12 +38,13 @@ public final class JarPatcher {
      * @param vanillaJar  the untouched Mojang client jar
      * @param clientRoots compiled client classes and resources (directories)
      * @param libraries   game libraries, used to resolve the class hierarchy for frame computation
+     * @param jdkHome     JDK the game runs on, used to resolve JDK classes, or {@code null} for the build's JDK
      * @param output      jar to write
      * @param hooksClass  internal name of the hooks class, e.g. {@code dev/cheat/client/hook/Hooks}
      * @param injections  every injection to apply
      * @param log         progress output
      */
-    public static void patch(Path vanillaJar, List<Path> clientRoots, List<Path> libraries, Path output,
+    public static void patch(Path vanillaJar, List<Path> clientRoots, List<Path> libraries, Path jdkHome, Path output,
                              String hooksClass, List<Injection> injections, Consumer<String> log) throws IOException {
         injections.forEach(Injection::validate);
 
@@ -61,6 +64,10 @@ public final class JarPatcher {
             try (Stream<Path> files = Files.walk(root)) {
                 for (Path file : (Iterable<Path>) files.filter(Files::isRegularFile)::iterator) {
                     String name = root.relativize(file).toString().replace('\\', '/');
+                    if (isSignatureOrManifest(name)) {
+                        throw new IllegalStateException("Client file " + name + " is not allowed: the patched jar"
+                                + " writes its own manifest and must not be signed");
+                    }
                     if (vanilla.containsKey(name)) {
                         throw new IllegalStateException("Client file " + name + " would overwrite a vanilla file");
                     }
@@ -80,7 +87,7 @@ public final class JarPatcher {
         try (ClassHierarchy hierarchy = new ClassHierarchy(name -> {
             byte[] b = vanilla.get(name + ".class");
             return b != null ? b : client.get(name + ".class");
-        }, libraries)) {
+        }, libraries, jdkHome)) {
             for (Map.Entry<String, List<Injection>> e : byOwner.entrySet()) {
                 String owner = e.getKey();
                 byte[] original = vanilla.get(owner + ".class");
@@ -105,6 +112,11 @@ public final class JarPatcher {
                                 + javaSignature(injection.hook, hookDesc) + " in " + hooksClass.replace('/', '.'));
                         continue;
                     }
+                    String unsupported = injection.unsupportedReason(method);
+                    if (unsupported != null) {
+                        errors.add("Cannot apply " + injection + ": " + unsupported);
+                        continue;
+                    }
                     int sites = injection.apply(method, hooksClass);
                     if (sites == 0) {
                         errors.add("Injection point not found: " + injection);
@@ -121,6 +133,10 @@ public final class JarPatcher {
                 node.accept(writer);
                 vanilla.put(owner + ".class", writer.toByteArray());
             }
+            if (!hierarchy.missing().isEmpty()) {
+                log.accept("Warning: classes not found while computing stack frames (treated as subclasses of"
+                        + " Object, which can cause a VerifyError at startup): " + String.join(", ", hierarchy.missing()));
+            }
         }
         if (!errors.isEmpty()) {
             throw new IllegalStateException("Patching failed:\n  " + String.join("\n  ", errors));
@@ -129,11 +145,12 @@ public final class JarPatcher {
         Files.createDirectories(output.getParent());
         Path tmp = output.resolveSibling(output.getFileName() + ".tmp");
         try (OutputStream fos = Files.newOutputStream(tmp); ZipOutputStream out = new ZipOutputStream(fos)) {
+            Set<String> written = new HashSet<>();
+            written.add("META-INF/MANIFEST.MF");
             out.putNextEntry(new ZipEntry("META-INF/MANIFEST.MF"));
             out.write("Manifest-Version: 1.0\r\nMain-Class: net.minecraft.client.main.Main\r\n\r\n"
                     .getBytes(StandardCharsets.UTF_8));
             out.closeEntry();
-            Set<String> written = new HashSet<>();
             for (Map<String, byte[]> map : List.of(vanilla, client)) {
                 for (Map.Entry<String, byte[]> entry : map.entrySet()) {
                     if (!written.add(entry.getKey())) continue;
@@ -143,7 +160,12 @@ public final class JarPatcher {
                 }
             }
         }
-        Files.move(tmp, output, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        try {
+            Files.move(tmp, output, StandardCopyOption.REPLACE_EXISTING);
+        } catch (FileSystemException e) {
+            Files.deleteIfExists(tmp);
+            throw new IOException("Cannot replace " + output + ". Is the game still running? Close it and build again.", e);
+        }
         log.accept("Wrote " + output + " (" + injections.size() + " injections, " + client.size() + " client files)");
     }
 

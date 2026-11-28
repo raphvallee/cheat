@@ -117,6 +117,18 @@ public final class Injection {
         }
     }
 
+    String unsupportedReason(MethodNode method) {
+        if (method.instructions.size() == 0) return "the target method has no code (abstract or native)";
+        if (cancellable && at == At.INVOKE) {
+            for (AbstractInsnNode insn : method.instructions) {
+                if (insn.getOpcode() == Opcodes.MONITORENTER) {
+                    return "cancellable INVOKE injections are not supported in methods with synchronized blocks";
+                }
+            }
+        }
+        return null;
+    }
+
     /** Applies this injection to {@code method}. Returns how many call sites were inserted. */
     int apply(MethodNode method, String hooksClass) {
         boolean isStatic = (method.access & Opcodes.ACC_STATIC) != 0;

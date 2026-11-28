@@ -2,6 +2,8 @@ package dev.cheat.client.util;
 
 /** ARGB color helpers. */
 public final class ColorUtil {
+    private static final double RAINBOW_PERIOD = 4000;
+    private static final long RAINBOW_CLOCK_WRAP = 400_000L;
     private ColorUtil() {}
 
     public static int argb(int a, int r, int g, int b) {
@@ -45,8 +47,13 @@ public final class ColorUtil {
 
     /** Animated rainbow; {@code offset} shifts the phase (e.g. per line of a list). */
     public static int rainbow(long offsetMillis, float saturation, float brightness) {
-        float hue = ((System.currentTimeMillis() + offsetMillis) % 4000L) / 4000f * 360f;
-        return hsb(hue, saturation, brightness);
+        return rainbow(offsetMillis, 1, saturation, brightness);
+    }
+
+    public static int rainbow(long offsetMillis, double speed, float saturation, float brightness) {
+        double time = (System.currentTimeMillis() % RAINBOW_CLOCK_WRAP) * speed;
+        double phase = ((time + offsetMillis) % RAINBOW_PERIOD + RAINBOW_PERIOD) % RAINBOW_PERIOD;
+        return hsb((float) (phase / RAINBOW_PERIOD * 360), saturation, brightness);
     }
 
     public static int darker(int color, float factor) {

@@ -43,6 +43,7 @@ public final class NumberSetting extends Setting<Double> {
 
     @Override
     protected Double validate(Double value) {
+        if (value.isNaN()) return get() != null ? get() : getDefault();
         double clamped = Math.max(min, Math.min(max, value));
         double snapped = min + Math.round((clamped - min) / step) * step;
         // Strip floating point noise (0.30000000000000004 -> 0.3)

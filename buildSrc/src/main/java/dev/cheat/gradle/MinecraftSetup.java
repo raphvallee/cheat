@@ -4,13 +4,21 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import org.gradle.api.logging.Logger;
+import org.gradle.api.logging.Logging;
 
 import java.io.IOException;
 import java.io.Reader;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileTime;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.Locale;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -25,6 +33,8 @@ public final class MinecraftSetup {
     private static final String MANIFEST = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json";
     private static final Gson GSON = new Gson();
     private static final ConcurrentHashMap<String, MinecraftSetup> CACHE = new ConcurrentHashMap<>();
+    private static final Duration VERSION_JSON_MAX_AGE = Duration.ofDays(1);
+    private static final Logger LOGGER = Logging.getLogger(MinecraftSetup.class);
 
     public final String version;
     public final Path root;
@@ -38,24 +48,39 @@ public final class MinecraftSetup {
         this.root = root;
         this.versionJsonFile = root.resolve("versions").resolve(version).resolve(version + ".json");
 
-        if (!Files.isRegularFile(versionJsonFile)) {
-            Path manifestFile = Downloader.download(MANIFEST, root.resolve("version_manifest_v2.json.tmp"), null);
-            JsonObject manifest = read(manifestFile);
-            Files.deleteIfExists(manifestFile);
-            JsonObject entry = null;
-            for (JsonElement e : manifest.getAsJsonArray("versions")) {
-                if (e.getAsJsonObject().get("id").getAsString().equals(version)) entry = e.getAsJsonObject();
-            }
-            if (entry == null) throw new IllegalArgumentException("Unknown Minecraft version: " + version);
-            Downloader.download(entry.get("url").getAsString(), versionJsonFile, entry.get("sha1").getAsString());
-        }
+        refreshVersionJson();
         this.versionJson = read(versionJsonFile);
 
         JsonObject client = versionJson.getAsJsonObject("downloads").getAsJsonObject("client");
         this.clientJar = Downloader.download(client.get("url").getAsString(),
-                root.resolve("versions").resolve(version).resolve(version + ".jar"), client.get("sha1").getAsString());
+                root.resolve("versions").resolve(version).resolve(version + ".jar"), client.get("sha1").getAsString(),
+                size(client));
 
         this.libraries = downloadLibraries();
+    }
+
+    private void refreshVersionJson() throws IOException {
+        Files.deleteIfExists(root.resolve("version_manifest_v2.json.tmp"));
+        boolean cached = Files.isRegularFile(versionJsonFile);
+        if (cached && Files.getLastModifiedTime(versionJsonFile).toInstant()
+                .isAfter(Instant.now().minus(VERSION_JSON_MAX_AGE))) {
+            return;
+        }
+        JsonObject manifest;
+        try {
+            manifest = GSON.fromJson(new String(Downloader.fetch(MANIFEST), StandardCharsets.UTF_8), JsonObject.class);
+        } catch (RuntimeException e) {
+            if (!cached) throw e;
+            LOGGER.warn("Could not check for an updated Minecraft {} version JSON, using the cached one: {}", version, e.getMessage());
+            return;
+        }
+        JsonObject entry = null;
+        for (JsonElement e : manifest.getAsJsonArray("versions")) {
+            if (e.getAsJsonObject().get("id").getAsString().equals(version)) entry = e.getAsJsonObject();
+        }
+        if (entry == null) throw new IllegalArgumentException("Unknown Minecraft version: " + version);
+        Downloader.download(entry.get("url").getAsString(), versionJsonFile, entry.get("sha1").getAsString());
+        Files.setLastModifiedTime(versionJsonFile, FileTime.from(Instant.now()));
     }
 
     public static MinecraftSetup resolve(Path gradleUserHome, String version) {
@@ -81,7 +106,8 @@ public final class MinecraftSetup {
             List<Future<Path>> futures = new ArrayList<>();
             for (JsonObject a : artifacts) {
                 futures.add(pool.submit(() -> Downloader.download(a.get("url").getAsString(),
-                        root.resolve("libraries").resolve(a.get("path").getAsString()), a.get("sha1").getAsString())));
+                        root.resolve("libraries").resolve(a.get("path").getAsString()), a.get("sha1").getAsString(),
+                        size(a))));
             }
             List<Path> result = new ArrayList<>();
             for (Future<Path> f : futures) result.add(f.get());
@@ -94,15 +120,20 @@ public final class MinecraftSetup {
     }
 
     /**
-     * Returns an assets directory containing this version's asset index. Reuses the official launcher's
-     * {@code .minecraft/assets} when it already has the index, otherwise downloads everything into the cache.
+     * Returns an assets directory containing this version's asset index and objects. Reuses the official launcher's
+     * {@code .minecraft/assets} when it already has all of them, otherwise downloads what is missing into the cache.
      */
     public Path assetsDir(Path minecraftDir) throws IOException {
         JsonObject index = versionJson.getAsJsonObject("assetIndex");
         String id = index.get("id").getAsString();
         Path launcherAssets = minecraftDir.resolve("assets");
-        if (Files.isRegularFile(launcherAssets.resolve("indexes").resolve(id + ".json"))) {
-            return launcherAssets;
+        Path launcherIndex = launcherAssets.resolve("indexes").resolve(id + ".json");
+        if (Files.isRegularFile(launcherIndex)) {
+            try {
+                if (hasAllObjects(launcherAssets, read(launcherIndex).getAsJsonObject("objects"))) return launcherAssets;
+            } catch (IOException | RuntimeException e) {
+                LOGGER.warn("Ignoring unreadable launcher asset index {}: {}", launcherIndex, e.getMessage());
+            }
         }
         Path assets = root.resolve("assets");
         Path indexFile = Downloader.download(index.get("url").getAsString(),
@@ -111,11 +142,15 @@ public final class MinecraftSetup {
         ExecutorService pool = Executors.newFixedThreadPool(16);
         try {
             List<Future<Path>> futures = new ArrayList<>();
+            Set<String> seen = new HashSet<>();
             for (String key : objects.keySet()) {
-                String hash = objects.getAsJsonObject(key).get("hash").getAsString();
+                JsonObject object = objects.getAsJsonObject(key);
+                String hash = object.get("hash").getAsString();
+                if (!seen.add(hash)) continue;
                 String sub = hash.substring(0, 2) + "/" + hash;
+                long size = size(object);
                 futures.add(pool.submit(() -> Downloader.download("https://resources.download.minecraft.net/" + sub,
-                        assets.resolve("objects").resolve(sub), hash)));
+                        assets.resolve("objects").resolve(sub), hash, size)));
             }
             for (Future<Path> f : futures) f.get();
         } catch (Exception e) {
@@ -124,6 +159,20 @@ public final class MinecraftSetup {
             pool.shutdown();
         }
         return assets;
+    }
+
+    private static boolean hasAllObjects(Path assets, JsonObject objects) throws IOException {
+        for (String key : objects.keySet()) {
+            JsonObject object = objects.getAsJsonObject(key);
+            String hash = object.get("hash").getAsString();
+            Path file = assets.resolve("objects").resolve(hash.substring(0, 2)).resolve(hash);
+            if (!Files.isRegularFile(file) || Files.size(file) != size(object)) return false;
+        }
+        return true;
+    }
+
+    private static long size(JsonObject download) {
+        return download.has("size") ? download.get("size").getAsLong() : -1;
     }
 
     public String assetIndexId() {

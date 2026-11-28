@@ -14,7 +14,12 @@ public final class ToggleCommand extends Command {
     public void execute(String[] args) throws CommandException {
         if (args.length != 1) throw CommandException.usage();
         Module module = Modules.find(args[0]);
+        boolean wasEnabled = module.isEnabled();
         module.toggle();
-        ChatUtil.info(module.getName() + " " + (module.isEnabled() ? "enabled" : "disabled") + ".");
+        if (module.isEnabled() == wasEnabled) {
+            ChatUtil.info(module.getName() + " activated.");
+        } else {
+            ChatUtil.info(module.getName() + " " + (module.isEnabled() ? "enabled" : "disabled") + ".");
+        }
     }
 }
