@@ -6,6 +6,7 @@ import dev.cheat.client.event.events.KeyInputEvent;
 import dev.cheat.client.module.impl.client.ClickGuiModule;
 import dev.cheat.client.module.impl.client.HudModule;
 import dev.cheat.client.module.impl.combat.Velocity;
+import dev.cheat.client.module.impl.movement.Fly;
 import dev.cheat.client.module.impl.movement.Sprint;
 import dev.cheat.client.module.impl.player.NoFall;
 import dev.cheat.client.module.impl.render.Esp;
@@ -34,6 +35,7 @@ public final class ModuleManager {
                 new Velocity(),
                 // Movement
                 new Sprint(),
+                new Fly(),
                 // Player
                 new NoFall(),
                 // Render

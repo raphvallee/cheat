@@ -1,17 +1,7 @@
 package dev.cheat.client.hook;
 
 import dev.cheat.client.Client;
-import dev.cheat.client.event.events.ChatSendEvent;
-import dev.cheat.client.event.events.KeyInputEvent;
-import dev.cheat.client.event.events.MotionEvent;
-import dev.cheat.client.event.events.MouseInputEvent;
-import dev.cheat.client.event.events.PacketReceiveEvent;
-import dev.cheat.client.event.events.PacketSendEvent;
-import dev.cheat.client.event.events.PlayerTickEvent;
-import dev.cheat.client.event.events.Render2DEvent;
-import dev.cheat.client.event.events.Render3DEvent;
-import dev.cheat.client.event.events.TickEvent;
-import dev.cheat.client.event.events.WorldChangeEvent;
+import dev.cheat.client.event.events.*;
 import dev.cheat.client.util.PacketUtil;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -165,6 +155,10 @@ public final class Hooks {
         }
         Client.events().post(new MotionEvent(MotionEvent.State.POST,
                 player.getX(), player.getY(), player.getZ(), player.getYRot(), player.getXRot(), player.onGround()));
+    }
+
+    public static void onPreTravel(LocalPlayer player) {
+        if (Client.isReady()) Client.events().post(new PreTravelEvent(player));
     }
 
     // ---------------------------------------------------------------- network

@@ -18,6 +18,7 @@ public final class GamePatches {
     private static final String MINECRAFT = "net/minecraft/client/Minecraft";
     private static final String LOCAL_PLAYER = "net/minecraft/client/player/LocalPlayer";
     private static final String CONNECTION = "net/minecraft/network/Connection";
+    private static final String ABSTRACT_CLIENT_PLAYER = "net/minecraft/client/player/AbstractClientPlayer";
 
     private GamePatches() {}
 
@@ -71,6 +72,9 @@ public final class GamePatches {
                         .beforeInvoke(LOCAL_PLAYER, "isPassenger", "()Z").call("onMotionPre"),
                 Injection.into(LOCAL_PLAYER).method("sendChanges", "()V")
                         .at(At.RETURN).call("onMotionPost"),
+                Injection.into(LOCAL_PLAYER).method("aiStep", "()V")
+                         .beforeInvoke(ABSTRACT_CLIENT_PLAYER, "aiStep", "()V")
+                         .call("onPreTravel"),
 
                 // Network
                 Injection.into(CONNECTION)

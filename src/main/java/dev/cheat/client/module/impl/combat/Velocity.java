@@ -28,13 +28,12 @@ public final class Velocity extends Module {
     @Subscribe
     private void onPacket(PacketReceiveEvent event) {
         LocalPlayer player = mc.player;
-        if (player == null || !(event.getPacket() instanceof ClientboundSetEntityMotionPacket packet)
-                || packet.id() != player.getId()) {
+        if (player == null || !(event.getPacket() instanceof ClientboundSetEntityMotionPacket(int id, Vec3 motion))
+                || id != player.getId()) {
             return;
         }
         event.cancel();
         if (mode.is("Modify")) {
-            Vec3 motion = packet.movement();
             double h = horizontal.getDouble() / 100.0;
             double v = vertical.getDouble() / 100.0;
             // Packet events usually run on the network thread: touch the player on the client thread.

@@ -21,6 +21,7 @@ public final class HudModule extends Module {
     private final ModeSetting sort = mode("Sort", "Length", "Length", "Alphabetical").visibleIf(arrayList::isEnabled);
     private final BooleanSetting background = bool("Background", true).visibleIf(arrayList::isEnabled);
     private final BooleanSetting coords = bool("Coordinates", true);
+    private final BooleanSetting speed = bool("Speed", true);
 
     public HudModule() {
         super("HUD", "Shows client information on screen.", Category.CLIENT);
@@ -36,10 +37,25 @@ public final class HudModule extends Module {
             RenderUtil.text(g, " " + Client.VERSION, 4 + RenderUtil.width(Client.NAME), 4, 0xFFAAAAAA, true);
         }
         if (arrayList.isEnabled()) drawModuleList(g, event.getWidth());
-        if (coords.isEnabled() && mc.player != null) {
-            String text = String.format(Locale.ROOT, "XYZ %.1f %.1f %.1f", mc.player.getX(), mc.player.getY(), mc.player.getZ());
-            RenderUtil.text(g, text, 4, event.getHeight() - RenderUtil.fontHeight() - 4, 0xFFFFFFFF, true);
+
+        if (mc.player != null) {
+            int yOffset = 0;
+            if (coords.isEnabled()) {
+                String text = String.format(Locale.ROOT, "XYZ %.1f %.1f %.1f", mc.player.getX(), mc.player.getY(), mc.player.getZ());
+                RenderUtil.text(g, text, 4, event.getHeight() - RenderUtil.fontHeight() - 4 - yOffset, 0xFFFFFFFF, true);
+                yOffset += RenderUtil.fontHeight();
+            }
+            if (speed.isEnabled()) {
+                double dx = mc.player.getX() - mc.player.xo;
+                double dy = mc.player.getY() - mc.player.yo;
+                double dz = mc.player.getZ() - mc.player.zo;
+                double bps = Math.sqrt(dx * dx + dy * dy + dz * dz) * 20.0;
+
+                String text = String.format(Locale.ROOT, "Speed %.2f b/s", bps);
+                RenderUtil.text(g, text, 4, event.getHeight() - RenderUtil.fontHeight() - 4 - yOffset, 0xFFFFFFFF, true);
+            }
         }
+
     }
 
     private void drawModuleList(GuiGraphicsExtractor g, int screenWidth) {
