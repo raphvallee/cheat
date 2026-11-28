@@ -1,3 +1,4 @@
+import dev.cheat.gradle.MicrosoftAuth
 import dev.cheat.gradle.MinecraftSetup
 import dev.cheat.gradle.patch.GamePatches
 import dev.cheat.gradle.task.CreateVersionTask
@@ -102,18 +103,22 @@ tasks.register<InstallClientTask>("installClient") {
     this.minecraftDir = launcherDir
 }
 
-tasks.register<JavaExec>("runClient") {
+/**
+ * Shared setup for the run tasks: patched jar + client classes on the classpath, run/ as game directory.
+ * [session] is resolved when the task executes and returns (username, uuid, accessToken, userType).
+ */
+fun JavaExec.configureRun(session: () -> List<String>) {
     group = "client"
-    description = "Starts the patched client in an offline dev session with run/ as game directory."
     javaLauncher = gameLauncher
     mainClass = mc.mainClass()
     classpath(patchVanilla.flatMap { it.outputJar }, sourceSets.main.map { it.output }, mc.libraries)
 
     val runDir = layout.projectDirectory.dir("run").asFile
     workingDir = runDir
-    val username = providers.gradleProperty("dev_username").getOrElse("Dev")
     // ./gradlew runClient -PquickWorld="New World" joins that singleplayer world (in run/saves) directly.
     val quickWorld = providers.gradleProperty("quickWorld").orNull
+    // ./gradlew runClientOnline -PquickServer=play.example.com:25565 joins that server directly.
+    val quickServer = providers.gradleProperty("quickServer").orNull
     doFirst {
         runDir.mkdirs()
         val natives = File(runDir, "natives").absolutePath.replace('\\', '/')
@@ -124,10 +129,12 @@ tasks.register<JavaExec>("runClient") {
                     .replace("\${launcher_name}", clientName)
                     .replace("\${launcher_version}", clientVersion)
             } + listOf("-Xmx4G", "-Dclient.dev=true"))
+        val (username, uuid, accessToken, userType) = session()
         args(
             "--username", username,
-            "--uuid", UUID.nameUUIDFromBytes("OfflinePlayer:$username".toByteArray()).toString().replace("-", ""),
-            "--accessToken", "0",
+            "--uuid", uuid,
+            "--accessToken", accessToken,
+            "--userType", userType,
             "--version", clientVersionId,
             "--versionType", "release",
             "--gameDir", runDir.absolutePath,
@@ -135,6 +142,26 @@ tasks.register<JavaExec>("runClient") {
             "--assetIndex", mc.assetIndexId(),
         )
         if (!quickWorld.isNullOrBlank()) args("--quickPlaySingleplayer", quickWorld)
+        if (!quickServer.isNullOrBlank()) args("--quickPlayMultiplayer", quickServer)
+    }
+}
+
+tasks.register<JavaExec>("runClient") {
+    description = "Starts the patched client in an offline dev session with run/ as game directory."
+    val username = providers.gradleProperty("dev_username").getOrElse("Dev")
+    configureRun {
+        val uuid = UUID.nameUUIDFromBytes("OfflinePlayer:$username".toByteArray()).toString().replace("-", "")
+        listOf(username, uuid, "0", "legacy")
+    }
+}
+
+tasks.register<JavaExec>("runClientOnline") {
+    description = "Starts the patched client logged in with a Microsoft account, so it can join online-mode servers."
+    // Holds the Microsoft refresh token. Delete it to log out or switch accounts.
+    val sessionFile = gradle.gradleUserHomeDir.toPath().resolve("caches/client-template/auth/microsoft.json")
+    configureRun {
+        val session = MicrosoftAuth.login(sessionFile) { logger.lifecycle(it) }
+        listOf(session.username(), session.uuid(), session.accessToken(), "msa")
     }
 }
 
