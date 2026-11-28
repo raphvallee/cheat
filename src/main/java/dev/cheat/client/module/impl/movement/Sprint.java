@@ -30,9 +30,7 @@ public final class Sprint extends Module {
     private void onPreTravel(PreTravelEvent event) {
         LocalPlayer p = event.getPlayer();
         if (omniSprint.get() && p.input.getMoveVector().lengthSquared() > 0 && p.getFoodData().getFoodLevel() > 6 && !p.isShiftKeyDown()) {
-            IO.println(p.input.getMoveVector().x + " , " + p.input.getMoveVector().y);
             if (!sideSprint.get() && p.input.getMoveVector().x != 0) return;
-
             p.setSprinting(true);
         }
     }
