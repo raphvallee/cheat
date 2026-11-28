@@ -26,13 +26,17 @@ import java.util.List;
 public final class ClickGuiScreen extends Screen {
     private static final int REFERENCE_GUI_SCALE = 2;
     private static final int MARGIN = 6;
-    /** Smallest virtual area the GUI needs: one panel with a few rows, plus margins. */
+    /**
+     * Smallest virtual area the GUI needs: one panel with a few rows, plus margins.
+     */
     private static final int MIN_VIRTUAL_WIDTH = Theme.PANEL_WIDTH + MARGIN * 2;
     private static final int MIN_VIRTUAL_HEIGHT = Theme.HEADER_HEIGHT + Theme.MODULE_HEIGHT * 3 + MARGIN * 2;
 
     private final ClickGuiModule module;
     private final List<Panel> panels = new ArrayList<>();
-    /** Scale the layout was last fitted for; the panels are fitted again when it changes. */
+    /**
+     * Scale the layout was last fitted for; the panels are fitted again when it changes.
+     */
     private float layoutScale = Float.NaN;
 
     public ClickGuiScreen(ClickGuiModule module) {
@@ -44,7 +48,9 @@ public final class ClickGuiScreen extends Screen {
         }
     }
 
-    /** The configured scale, lowered when needed so that the GUI cannot be larger than the window. */
+    /**
+     * The configured scale, lowered when needed so that the GUI cannot be larger than the window.
+     */
     private float scale() {
         float requested = (float) (module.scale.getDouble() * REFERENCE_GUI_SCALE / minecraft.getWindow().getGuiScale());
         float fit = Math.min((float) width / MIN_VIRTUAL_WIDTH, (float) height / MIN_VIRTUAL_HEIGHT);
@@ -68,7 +74,9 @@ public final class ClickGuiScreen extends Screen {
         fitLayout();
     }
 
-    /** If the saved/default layout does not fit the window at the current scale, flow the panels into rows that do. */
+    /**
+     * If the saved/default layout does not fit the window at the current scale, flow the panels into rows that do.
+     */
     private void fitLayout() {
         layoutScale = scale();
         int vw = virtualWidth();

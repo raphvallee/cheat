@@ -20,77 +20,78 @@ public final class GamePatches {
     private static final String CONNECTION = "net/minecraft/network/Connection";
     private static final String ABSTRACT_CLIENT_PLAYER = "net/minecraft/client/player/AbstractClientPlayer";
 
-    private GamePatches() {}
+    private GamePatches() {
+    }
 
     public static List<Injection> all() {
         return List.of(
                 // Lifecycle
                 Injection.into(MINECRAFT).method("<init>", "(Lnet/minecraft/client/main/GameConfig;)V")
-                        .at(At.RETURN).call("onStartup"),
+                         .at(At.RETURN).call("onStartup"),
                 Injection.into(MINECRAFT).method("close", "()V")
-                        .at(At.HEAD).call("onShutdown"),
+                         .at(At.HEAD).call("onShutdown"),
                 Injection.into(MINECRAFT).method("emergencySaveAndCrash", "(Lnet/minecraft/CrashReport;)V")
-                        .at(At.HEAD).call("onCrash"),
+                         .at(At.HEAD).call("onCrash"),
 
                 // Game loop
                 Injection.into(MINECRAFT).method("tick", "()V")
-                        .at(At.HEAD).call("onTickPre"),
+                         .at(At.HEAD).call("onTickPre"),
                 Injection.into(MINECRAFT).method("tick", "()V")
-                        .at(At.RETURN).call("onTickPost"),
+                         .at(At.RETURN).call("onTickPost"),
 
                 // World rendering: runs while the per-frame gizmo collector is open, so Gizmos.* draws in-world
                 Injection.into(MINECRAFT).method("renderFrame", "(Z)V")
-                        .beforeInvoke("net/minecraft/client/renderer/GameRenderer", "extract",
-                                "(Lnet/minecraft/client/DeltaTracker;Z)V")
-                        .call("onRender3D"),
+                         .beforeInvoke("net/minecraft/client/renderer/GameRenderer", "extract",
+                                 "(Lnet/minecraft/client/DeltaTracker;Z)V")
+                         .call("onRender3D"),
 
                 // World changes
                 Injection.into(MINECRAFT).method("setLevel", "(Lnet/minecraft/client/multiplayer/ClientLevel;)V")
-                        .at(At.RETURN).call("onSetLevel"),
+                         .at(At.RETURN).call("onSetLevel"),
                 Injection.into(MINECRAFT).method("disconnect", "(Lnet/minecraft/client/gui/screens/Screen;ZZ)V")
-                        .at(At.HEAD).call("onDisconnect"),
+                         .at(At.HEAD).call("onDisconnect"),
                 Injection.into(MINECRAFT).method("clearClientLevel", "(Lnet/minecraft/client/gui/screens/Screen;)V")
-                        .at(At.HEAD).call("onClearLevel"),
+                         .at(At.HEAD).call("onClearLevel"),
 
                 // Input
                 Injection.into("net/minecraft/client/KeyboardHandler")
-                        .method("keyPress", "(JILnet/minecraft/client/input/KeyEvent;)V")
-                        .at(At.HEAD).cancellable().call("onKeyPress"),
+                         .method("keyPress", "(JILnet/minecraft/client/input/KeyEvent;)V")
+                         .at(At.HEAD).cancellable().call("onKeyPress"),
                 Injection.into("net/minecraft/client/MouseHandler")
-                        .method("onButton", "(JLnet/minecraft/client/input/MouseButtonInfo;I)V")
-                        .at(At.HEAD).cancellable().call("onMouseButton"),
+                         .method("onButton", "(JLnet/minecraft/client/input/MouseButtonInfo;I)V")
+                         .at(At.HEAD).cancellable().call("onMouseButton"),
 
                 // HUD rendering
                 Injection.into("net/minecraft/client/gui/Hud")
-                        .method("extractRenderState", "(Lnet/minecraft/client/gui/GuiGraphicsExtractor;Lnet/minecraft/client/DeltaTracker;)V")
-                        .at(At.RETURN).call("onRender2D"),
+                         .method("extractRenderState", "(Lnet/minecraft/client/gui/GuiGraphicsExtractor;Lnet/minecraft/client/DeltaTracker;)V")
+                         .at(At.RETURN).call("onRender2D"),
 
                 // Player
                 Injection.into(LOCAL_PLAYER).method("tick", "()V")
-                        .at(At.HEAD).call("onPlayerTick"),
+                         .at(At.HEAD).call("onPlayerTick"),
                 Injection.into(LOCAL_PLAYER).method("sendChanges", "()V")
-                        .beforeInvoke(LOCAL_PLAYER, "isPassenger", "()Z").call("onMotionPre"),
+                         .beforeInvoke(LOCAL_PLAYER, "isPassenger", "()Z").call("onMotionPre"),
                 Injection.into(LOCAL_PLAYER).method("sendChanges", "()V")
-                        .at(At.RETURN).call("onMotionPost"),
+                         .at(At.RETURN).call("onMotionPost"),
                 Injection.into(LOCAL_PLAYER).method("aiStep", "()V")
                          .beforeInvoke(ABSTRACT_CLIENT_PLAYER, "aiStep", "()V")
                          .call("onPreTravel"),
 
                 // Network
                 Injection.into(CONNECTION)
-                        .method("send", "(Lnet/minecraft/network/protocol/Packet;Lio/netty/channel/ChannelFutureListener;Z)V")
-                        .at(At.HEAD).cancellable().call("onPacketSend"),
+                         .method("send", "(Lnet/minecraft/network/protocol/Packet;Lio/netty/channel/ChannelFutureListener;Z)V")
+                         .at(At.HEAD).cancellable().call("onPacketSend"),
                 Injection.into(CONNECTION)
-                        .method("channelRead0", "(Lio/netty/channel/ChannelHandlerContext;Lnet/minecraft/network/protocol/Packet;)V")
-                        .at(At.HEAD).cancellable().call("onPacketReceive"),
+                         .method("channelRead0", "(Lio/netty/channel/ChannelHandlerContext;Lnet/minecraft/network/protocol/Packet;)V")
+                         .at(At.HEAD).cancellable().call("onPacketReceive"),
                 Injection.into("net/minecraft/client/multiplayer/ClientPacketListener")
-                        .method("handleBundlePacket", "(Lnet/minecraft/network/protocol/game/ClientboundBundlePacket;)V")
-                        .at(At.HEAD).cancellable().call("onBundlePacket"),
+                         .method("handleBundlePacket", "(Lnet/minecraft/network/protocol/game/ClientboundBundlePacket;)V")
+                         .at(At.HEAD).cancellable().call("onBundlePacket"),
 
                 // Chat (client commands)
                 Injection.into("net/minecraft/client/gui/screens/ChatScreen")
-                        .method("handleChatInput", "(Ljava/lang/String;Z)V")
-                        .at(At.HEAD).cancellable().call("onChatInput")
+                         .method("handleChatInput", "(Ljava/lang/String;Z)V")
+                         .at(At.HEAD).cancellable().call("onChatInput")
         );
     }
 }

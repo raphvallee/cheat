@@ -1,6 +1,8 @@
 package dev.cheat.client.event;
 
-/** An event whose vanilla behavior is skipped when cancelled. */
+/**
+ * An event whose vanilla behavior is skipped when cancelled.
+ */
 public abstract class CancellableEvent extends Event {
     private boolean cancelled;
 

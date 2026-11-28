@@ -7,7 +7,9 @@ import dev.cheat.client.util.KeyUtil;
 import dev.cheat.client.util.RenderUtil;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 
-/** Click, then press a key to bind. Escape / Backspace / Delete or right click unbind. */
+/**
+ * Click, then press a key to bind. Escape / Backspace / Delete or right click unbind.
+ */
 public final class BindElement extends GuiElement {
     private final Module module;
     private boolean listening;

@@ -6,14 +6,15 @@ import dev.cheat.client.util.ColorUtil;
 import dev.cheat.client.util.RenderUtil;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 
-/** Color row; click to expand hue / saturation / brightness / alpha sliders. Right click resets. */
+/**
+ * Color row; click to expand hue / saturation / brightness / alpha sliders. Right click resets.
+ */
 public final class ColorElement extends SettingElement<ColorSetting> {
     private static final int SLIDER_ROW = 10;
     private static final String[] LABELS = {"H", "S", "B", "A"};
-
+    private final float[] hsba = new float[4];
     private boolean expanded;
     private int dragging = -1;
-    private final float[] hsba = new float[4];
     private int lastSynced;
 
     public ColorElement(ColorSetting setting) {

@@ -5,7 +5,9 @@ import com.google.gson.JsonPrimitive;
 
 import java.util.List;
 
-/** One choice out of a fixed list, e.g. {@code mode("Mode", "Packet", "Packet", "Vanilla")}. */
+/**
+ * One choice out of a fixed list, e.g. {@code mode("Mode", "Packet", "Packet", "Vanilla")}.
+ */
 public final class ModeSetting extends Setting<String> {
     private final List<String> modes;
 
@@ -29,7 +31,9 @@ public final class ModeSetting extends Setting<String> {
         return modes.indexOf(get());
     }
 
-    /** Selects the next ({@code direction > 0}) or previous mode, wrapping around. */
+    /**
+     * Selects the next ({@code direction > 0}) or previous mode, wrapping around.
+     */
     public void cycle(int direction) {
         int next = Math.floorMod(index() + Integer.signum(direction), modes.size());
         set(modes.get(next));

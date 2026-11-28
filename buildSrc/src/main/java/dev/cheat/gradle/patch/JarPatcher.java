@@ -16,14 +16,7 @@ import java.nio.file.FileSystemException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
@@ -38,7 +31,8 @@ import java.util.zip.ZipOutputStream;
 public final class JarPatcher {
     private static final int BUFFER = 1 << 16;
 
-    private JarPatcher() {}
+    private JarPatcher() {
+    }
 
     /**
      * @param vanillaJar the untouched Mojang client jar
@@ -71,7 +65,8 @@ public final class JarPatcher {
         Set<String> hookMethods = staticMethods(hooksBytes);
 
         Map<String, List<Injection>> byOwner = new LinkedHashMap<>();
-        for (Injection injection : injections) byOwner.computeIfAbsent(injection.owner, k -> new ArrayList<>()).add(injection);
+        for (Injection injection : injections)
+            byOwner.computeIfAbsent(injection.owner, k -> new ArrayList<>()).add(injection);
 
         List<String> errors = new ArrayList<>();
         try (ClassHierarchy hierarchy = new ClassHierarchy(name -> {
@@ -89,8 +84,8 @@ public final class JarPatcher {
                 new ClassReader(original).accept(node, ClassReader.SKIP_FRAMES);
                 for (Injection injection : e.getValue()) {
                     MethodNode method = node.methods.stream()
-                            .filter(m -> m.name.equals(injection.name) && m.desc.equals(injection.desc))
-                            .findFirst().orElse(null);
+                                                    .filter(m -> m.name.equals(injection.name) && m.desc.equals(injection.desc))
+                                                    .findFirst().orElse(null);
                     if (method == null) {
                         errors.add("Target method not found: " + injection.target());
                         continue;
@@ -194,10 +189,6 @@ public final class JarPatcher {
         }
     }
 
-    private interface JarContent {
-        void write(ZipOutputStream out) throws IOException;
-    }
-
     private static void writeJar(Path output, JarContent content) throws IOException {
         Files.createDirectories(output.getParent());
         Path tmp = output.resolveSibling(output.getFileName() + ".tmp");
@@ -241,5 +232,9 @@ public final class JarPatcher {
             sb.append(args[i].getClassName().replace('$', '.')).append(" arg").append(i);
         }
         return sb.append(')').toString();
+    }
+
+    private interface JarContent {
+        void write(ZipOutputStream out) throws IOException;
     }
 }

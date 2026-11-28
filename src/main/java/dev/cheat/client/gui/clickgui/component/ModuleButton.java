@@ -2,11 +2,7 @@ package dev.cheat.client.gui.clickgui.component;
 
 import dev.cheat.client.gui.clickgui.Theme;
 import dev.cheat.client.module.Module;
-import dev.cheat.client.module.setting.BooleanSetting;
-import dev.cheat.client.module.setting.ColorSetting;
-import dev.cheat.client.module.setting.ModeSetting;
-import dev.cheat.client.module.setting.NumberSetting;
-import dev.cheat.client.module.setting.Setting;
+import dev.cheat.client.module.setting.*;
 import dev.cheat.client.util.ColorUtil;
 import dev.cheat.client.util.RenderUtil;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -14,7 +10,9 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import java.util.ArrayList;
 import java.util.List;
 
-/** One module in a panel. Left click toggles it, right click shows its settings. */
+/**
+ * One module in a panel. Left click toggles it, right click shows its settings.
+ */
 public final class ModuleButton extends GuiElement {
     private final Module module;
     private final List<GuiElement> children = new ArrayList<>();
@@ -29,7 +27,9 @@ public final class ModuleButton extends GuiElement {
         children.add(new BindElement(module));
     }
 
-    /** Maps a setting type to its GUI row. Add new setting types here. */
+    /**
+     * Maps a setting type to its GUI row. Add new setting types here.
+     */
     private static GuiElement createElement(Setting<?> setting) {
         if (setting instanceof BooleanSetting s) return new BooleanElement(s);
         if (setting instanceof NumberSetting s) return new NumberElement(s);

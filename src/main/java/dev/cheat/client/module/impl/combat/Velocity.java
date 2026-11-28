@@ -17,9 +17,9 @@ import net.minecraft.world.phys.Vec3;
 public final class Velocity extends Module {
     private final ModeSetting mode = mode("Mode", "Cancel", "Cancel", "Modify");
     private final NumberSetting horizontal = number("Horizontal", 0, 0, 100, 1).withSuffix("%")
-            .visibleIf(() -> mode.is("Modify"));
+                                                                               .visibleIf(() -> mode.is("Modify"));
     private final NumberSetting vertical = number("Vertical", 0, 0, 100, 1).withSuffix("%")
-            .visibleIf(() -> mode.is("Modify"));
+                                                                           .visibleIf(() -> mode.is("Modify"));
 
     public Velocity() {
         super("Velocity", "Reduces knockback.", Category.COMBAT);

@@ -15,7 +15,9 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
 
-/** Example: in-world rendering with {@link Render3DEvent} and Gizmos. */
+/**
+ * Example: in-world rendering with {@link Render3DEvent} and Gizmos.
+ */
 public final class Esp extends Module {
     private final BooleanSetting players = bool("Players", true);
     private final BooleanSetting mobs = bool("Mobs", false);

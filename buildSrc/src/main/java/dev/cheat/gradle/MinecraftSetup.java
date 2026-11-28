@@ -15,11 +15,7 @@ import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.Locale;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -59,11 +55,53 @@ public final class MinecraftSetup {
         this.libraries = downloadLibraries();
     }
 
+    public static MinecraftSetup resolve(Path gradleUserHome, String version) {
+        return CACHE.computeIfAbsent(version, v -> {
+            try {
+                return new MinecraftSetup(v, gradleUserHome.resolve("caches/client-template/minecraft"));
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to set up Minecraft " + v, e);
+            }
+        });
+    }
+
+    /**
+     * After a failure, stops the queued and running downloads instead of letting them finish.
+     */
+    private static void shutdown(ExecutorService pool, List<? extends Future<?>> futures, boolean done) {
+        if (done) {
+            pool.shutdown();
+            return;
+        }
+        for (Future<?> f : futures) f.cancel(true);
+        pool.shutdownNow();
+    }
+
+    private static boolean hasAllObjects(Path assets, JsonObject objects) throws IOException {
+        for (String key : objects.keySet()) {
+            JsonObject object = objects.getAsJsonObject(key);
+            String hash = object.get("hash").getAsString();
+            Path file = assets.resolve("objects").resolve(hash.substring(0, 2)).resolve(hash);
+            if (!Files.isRegularFile(file) || Files.size(file) != size(object)) return false;
+        }
+        return true;
+    }
+
+    private static long size(JsonObject download) {
+        return download.has("size") ? download.get("size").getAsLong() : -1;
+    }
+
+    private static JsonObject read(Path file) throws IOException {
+        try (Reader reader = Files.newBufferedReader(file)) {
+            return GSON.fromJson(reader, JsonObject.class);
+        }
+    }
+
     private void refreshVersionJson() throws IOException {
         Files.deleteIfExists(root.resolve("version_manifest_v2.json.tmp"));
         boolean cached = Files.isRegularFile(versionJsonFile);
         if (cached && Files.getLastModifiedTime(versionJsonFile).toInstant()
-                .isAfter(Instant.now().minus(VERSION_JSON_MAX_AGE))) {
+                           .isAfter(Instant.now().minus(VERSION_JSON_MAX_AGE))) {
             return;
         }
         JsonObject manifest;
@@ -81,16 +119,6 @@ public final class MinecraftSetup {
         if (entry == null) throw new IllegalArgumentException("Unknown Minecraft version: " + version);
         Downloader.download(entry.get("url").getAsString(), versionJsonFile, entry.get("sha1").getAsString());
         Files.setLastModifiedTime(versionJsonFile, FileTime.from(Instant.now()));
-    }
-
-    public static MinecraftSetup resolve(Path gradleUserHome, String version) {
-        return CACHE.computeIfAbsent(version, v -> {
-            try {
-                return new MinecraftSetup(v, gradleUserHome.resolve("caches/client-template/minecraft"));
-            } catch (IOException e) {
-                throw new RuntimeException("Failed to set up Minecraft " + v, e);
-            }
-        });
     }
 
     private List<Path> downloadLibraries() {
@@ -132,7 +160,8 @@ public final class MinecraftSetup {
         Path launcherIndex = launcherAssets.resolve("indexes").resolve(id + ".json");
         if (Files.isRegularFile(launcherIndex)) {
             try {
-                if (hasAllObjects(launcherAssets, read(launcherIndex).getAsJsonObject("objects"))) return launcherAssets;
+                if (hasAllObjects(launcherAssets, read(launcherIndex).getAsJsonObject("objects")))
+                    return launcherAssets;
             } catch (IOException | RuntimeException e) {
                 LOGGER.warn("Ignoring unreadable launcher asset index {}: {}", launcherIndex, e.getMessage());
             }
@@ -165,30 +194,6 @@ public final class MinecraftSetup {
         return assets;
     }
 
-    /** After a failure, stops the queued and running downloads instead of letting them finish. */
-    private static void shutdown(ExecutorService pool, List<? extends Future<?>> futures, boolean done) {
-        if (done) {
-            pool.shutdown();
-            return;
-        }
-        for (Future<?> f : futures) f.cancel(true);
-        pool.shutdownNow();
-    }
-
-    private static boolean hasAllObjects(Path assets, JsonObject objects) throws IOException {
-        for (String key : objects.keySet()) {
-            JsonObject object = objects.getAsJsonObject(key);
-            String hash = object.get("hash").getAsString();
-            Path file = assets.resolve("objects").resolve(hash.substring(0, 2)).resolve(hash);
-            if (!Files.isRegularFile(file) || Files.size(file) != size(object)) return false;
-        }
-        return true;
-    }
-
-    private static long size(JsonObject download) {
-        return download.has("size") ? download.get("size").getAsLong() : -1;
-    }
-
     public String assetIndexId() {
         return versionJson.getAsJsonObject("assetIndex").get("id").getAsString();
     }
@@ -197,7 +202,9 @@ public final class MinecraftSetup {
         return versionJson.get("mainClass").getAsString();
     }
 
-    /** Fixed JVM arguments from the version JSON that apply to this OS (placeholders not substituted). */
+    /**
+     * Fixed JVM arguments from the version JSON that apply to this OS (placeholders not substituted).
+     */
     public List<String> jvmArguments() {
         List<String> out = new ArrayList<>();
         JsonArray jvm = versionJson.getAsJsonObject("arguments").getAsJsonArray("jvm");
@@ -215,15 +222,12 @@ public final class MinecraftSetup {
         return out;
     }
 
-    private static JsonObject read(Path file) throws IOException {
-        try (Reader reader = Files.newBufferedReader(file)) {
-            return GSON.fromJson(reader, JsonObject.class);
-        }
-    }
-
-    /** Evaluates Mojang's library/argument rules for the current machine. Feature rules never match. */
+    /**
+     * Evaluates Mojang's library/argument rules for the current machine. Feature rules never match.
+     */
     public static final class Rules {
-        private Rules() {}
+        private Rules() {
+        }
 
         public static boolean allowed(JsonArray rules) {
             boolean allowed = false;

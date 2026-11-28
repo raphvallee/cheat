@@ -47,7 +47,8 @@ public final class Hooks {
     private static float realPitch;
     private static boolean realOnGround;
 
-    private Hooks() {}
+    private Hooks() {
+    }
 
     // ---------------------------------------------------------------- lifecycle
 
@@ -165,7 +166,8 @@ public final class Hooks {
 
     public static boolean onPacketSend(Connection connection, Packet<?> packet, ChannelFutureListener listener, boolean flush) {
         // Singleplayer also runs server-side connections in this JVM; only look at the client's own connection.
-        if (!Client.isReady() || connection.getSending() != PacketFlow.SERVERBOUND || PacketUtil.isSilent()) return false;
+        if (!Client.isReady() || connection.getSending() != PacketFlow.SERVERBOUND || PacketUtil.isSilent())
+            return false;
         return Client.events().post(new PacketSendEvent(packet)).isCancelled();
     }
 

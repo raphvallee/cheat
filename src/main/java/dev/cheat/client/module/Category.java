@@ -1,6 +1,8 @@
 package dev.cheat.client.module;
 
-/** Module categories; each one is a panel in the ClickGUI (in this order). */
+/**
+ * Module categories; each one is a panel in the ClickGUI (in this order).
+ */
 public enum Category {
     COMBAT("Combat"),
     MOVEMENT("Movement"),

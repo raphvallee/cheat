@@ -21,6 +21,8 @@ public final class Client {
     public static final String VERSION;
     public static final String MINECRAFT_VERSION;
     public static final Logger LOGGER;
+    private static Client instance;
+    private static volatile boolean ready;
 
     static {
         Properties props = new Properties();
@@ -33,9 +35,6 @@ public final class Client {
         MINECRAFT_VERSION = props.getProperty("minecraft", "?");
         LOGGER = LoggerFactory.getLogger(NAME);
     }
-
-    private static Client instance;
-    private static volatile boolean ready;
 
     public final EventBus eventBus = new EventBus();
     public final ModuleManager moduleManager;
@@ -62,17 +61,16 @@ public final class Client {
                 client.moduleManager.getModules().size(), client.commandManager.getCommands().size());
     }
 
-    public void shutdown() {
-        configManager.save();
-        LOGGER.info("{} shut down", NAME);
-    }
-
-    /** The running client, or {@code null} before startup (hooks must check {@link #isReady()}). */
+    /**
+     * The running client, or {@code null} before startup (hooks must check {@link #isReady()}).
+     */
     public static Client get() {
         return instance;
     }
 
-    /** Whether startup completed. Hooks do nothing until then. */
+    /**
+     * Whether startup completed. Hooks do nothing until then.
+     */
     public static boolean isReady() {
         return ready;
     }
@@ -91,5 +89,10 @@ public final class Client {
 
     public static ConfigManager config() {
         return instance.configManager;
+    }
+
+    public void shutdown() {
+        configManager.save();
+        LOGGER.info("{} shut down", NAME);
     }
 }

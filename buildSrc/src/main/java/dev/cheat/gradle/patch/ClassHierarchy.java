@@ -11,12 +11,7 @@ import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
@@ -27,14 +22,11 @@ import java.util.zip.ZipFile;
  * from the game jar, its libraries and the JDK, without ever loading game classes.
  */
 final class ClassHierarchy implements AutoCloseable {
-    record Info(String superName, boolean isInterface) {}
-
     private final Function<String, byte[]> gameClasses;
     private final List<ZipFile> libraries;
     private final FileSystem jdk;
     private final Map<String, Info> cache = new HashMap<>();
     private final Set<String> missing = new TreeSet<>();
-
     ClassHierarchy(Function<String, byte[]> gameClasses, List<Path> libraryJars, Path jdkHome) throws IOException {
         this.gameClasses = gameClasses;
         this.jdk = jdkHome == null ? null
@@ -127,5 +119,8 @@ final class ClassHierarchy implements AutoCloseable {
     public void close() throws IOException {
         for (ZipFile zip : libraries) zip.close();
         if (jdk != null) jdk.close();
+    }
+
+    record Info(String superName, boolean isInterface) {
     }
 }

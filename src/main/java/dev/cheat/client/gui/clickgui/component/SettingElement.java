@@ -5,7 +5,9 @@ import dev.cheat.client.module.setting.Setting;
 import dev.cheat.client.util.RenderUtil;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 
-/** Base for rows editing one {@link Setting}. Hidden when the setting's {@code visibleIf} is false. */
+/**
+ * Base for rows editing one {@link Setting}. Hidden when the setting's {@code visibleIf} is false.
+ */
 public abstract class SettingElement<S extends Setting<?>> extends GuiElement {
     protected final S setting;
 
@@ -28,7 +30,9 @@ public abstract class SettingElement<S extends Setting<?>> extends GuiElement {
         if (hovered(mouseX, mouseY)) RenderUtil.rect(g, x, y, width, height(), Theme.HOVER);
     }
 
-    /** Draws the setting name on the left and {@code value} right-aligned. */
+    /**
+     * Draws the setting name on the left and {@code value} right-aligned.
+     */
     protected void nameAndValue(GuiGraphicsExtractor g, String value, int valueColor) {
         int textY = y + (Theme.ROW_HEIGHT - RenderUtil.fontHeight()) / 2 + 1;
         RenderUtil.text(g, setting.getName(), x + Theme.PADDING + 2, textY, Theme.TEXT, false);

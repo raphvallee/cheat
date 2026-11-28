@@ -10,8 +10,6 @@ import dev.cheat.client.event.Event;
  * while the client camera keeps the real ones (silent rotations). Values are restored before {@link State#POST}.</p>
  */
 public final class MotionEvent extends Event {
-    public enum State { PRE, POST }
-
     private final State state;
     private final double x;
     private final double y;
@@ -19,7 +17,6 @@ public final class MotionEvent extends Event {
     private float yaw;
     private float pitch;
     private boolean onGround;
-
     public MotionEvent(State state, double x, double y, double z, float yaw, float pitch, boolean onGround) {
         this.state = state;
         this.x = x;
@@ -73,4 +70,6 @@ public final class MotionEvent extends Event {
     public void setOnGround(boolean onGround) {
         this.onGround = onGround;
     }
+
+    public enum State {PRE, POST}
 }

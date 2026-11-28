@@ -35,7 +35,9 @@ public abstract class Command implements MinecraftInstance {
         return description;
     }
 
-    /** Arguments syntax, e.g. {@code <module> <key>}. */
+    /**
+     * Arguments syntax, e.g. {@code <module> <key>}.
+     */
     public String getUsage() {
         return usage;
     }

@@ -27,7 +27,9 @@ public abstract class GuiElement {
 
     public abstract void render(GuiGraphicsExtractor g, int mouseX, int mouseY);
 
-    /** @return true when the click was used */
+    /**
+     * @return true when the click was used
+     */
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         return false;
     }
@@ -41,17 +43,23 @@ public abstract class GuiElement {
     public void defocus() {
     }
 
-    /** @return true when the key was used (e.g. while waiting for a bind) */
+    /**
+     * @return true when the key was used (e.g. while waiting for a bind)
+     */
     public boolean keyPressed(int key) {
         return false;
     }
 
-    /** @return true when the typed character was used (e.g. while editing a text field) */
+    /**
+     * @return true when the typed character was used (e.g. while editing a text field)
+     */
     public boolean charTyped(int codepoint) {
         return false;
     }
 
-    /** True while this row captures the keyboard (waiting for a bind, editing a value). */
+    /**
+     * True while this row captures the keyboard (waiting for a bind, editing a value).
+     */
     public boolean isListening() {
         return false;
     }
@@ -60,7 +68,9 @@ public abstract class GuiElement {
         return true;
     }
 
-    /** Description shown at the bottom of the screen while hovered, or {@code null}. */
+    /**
+     * Description shown at the bottom of the screen while hovered, or {@code null}.
+     */
     public String getDescription(double mouseX, double mouseY) {
         return null;
     }

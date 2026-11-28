@@ -7,11 +7,7 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.IdentityHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -30,10 +26,18 @@ public final class EventBus {
     private final Map<Object, List<Handler>> byOwner = Collections.synchronizedMap(new IdentityHashMap<>());
     private final Map<Class<?>, List<Method>> scanCache = new ConcurrentHashMap<>();
 
-    private record Handler(Object owner, String name, MethodHandle handle, int priority, boolean receiveCancelled,
-                           AtomicInteger errors) {}
+    private static MethodHandle bind(Object owner, Method method) {
+        try {
+            MethodHandles.Lookup lookup = MethodHandles.privateLookupIn(method.getDeclaringClass(), MethodHandles.lookup());
+            return lookup.unreflect(method).bindTo(owner).asType(HANDLER_TYPE);
+        } catch (IllegalAccessException e) {
+            throw new IllegalStateException("Cannot access " + method, e);
+        }
+    }
 
-    /** Registers every {@link Subscribe} method of {@code owner}. Registering twice is a no-op. */
+    /**
+     * Registers every {@link Subscribe} method of {@code owner}. Registering twice is a no-op.
+     */
     public void subscribe(Object owner) {
         synchronized (byOwner) {
             if (byOwner.containsKey(owner)) return;
@@ -67,7 +71,9 @@ public final class EventBus {
         return byOwner.containsKey(owner);
     }
 
-    /** Posts {@code event} to its handlers in priority order and returns it. */
+    /**
+     * Posts {@code event} to its handlers in priority order and returns it.
+     */
     public <T extends Event> T post(T event) {
         List<Handler> list = handlersFor(event.getClass());
         if (list.isEmpty()) return event;
@@ -126,12 +132,7 @@ public final class EventBus {
         });
     }
 
-    private static MethodHandle bind(Object owner, Method method) {
-        try {
-            MethodHandles.Lookup lookup = MethodHandles.privateLookupIn(method.getDeclaringClass(), MethodHandles.lookup());
-            return lookup.unreflect(method).bindTo(owner).asType(HANDLER_TYPE);
-        } catch (IllegalAccessException e) {
-            throw new IllegalStateException("Cannot access " + method, e);
-        }
+    private record Handler(Object owner, String name, MethodHandle handle, int priority, boolean receiveCancelled,
+                           AtomicInteger errors) {
     }
 }

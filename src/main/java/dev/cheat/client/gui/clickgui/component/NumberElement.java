@@ -14,11 +14,17 @@ public final class NumberElement extends SettingElement<NumberSetting> {
     private static final int MAX_INPUT_LENGTH = 8;
 
     private boolean dragging;
-    /** Text being typed, or {@code null} when not editing. */
+    /**
+     * Text being typed, or {@code null} when not editing.
+     */
     private String input;
 
     public NumberElement(NumberSetting setting) {
         super(setting);
+    }
+
+    private static String format(double value) {
+        return value == Math.rint(value) ? String.valueOf((long) value) : String.valueOf(value);
     }
 
     @Override
@@ -124,7 +130,9 @@ public final class NumberElement extends SettingElement<NumberSetting> {
         return true;
     }
 
-    /** Applies the typed value (clamped to the setting's range); an empty or invalid entry keeps the old value. */
+    /**
+     * Applies the typed value (clamped to the setting's range); an empty or invalid entry keeps the old value.
+     */
     private void commit() {
         if (input == null) return;
         String typed = input;
@@ -144,9 +152,5 @@ public final class NumberElement extends SettingElement<NumberSetting> {
         String hint = "Click, type a number (" + format(setting.getMin()) + "-" + format(setting.getMax())
                 + ") and press Enter. Right click to reset.";
         return description == null ? hint : description + " " + hint;
-    }
-
-    private static String format(double value) {
-        return value == Math.rint(value) ? String.valueOf((long) value) : String.valueOf(value);
     }
 }

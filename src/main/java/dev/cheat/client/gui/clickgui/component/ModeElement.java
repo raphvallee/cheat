@@ -4,7 +4,9 @@ import dev.cheat.client.gui.clickgui.Theme;
 import dev.cheat.client.module.setting.ModeSetting;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 
-/** Left click: next mode. Right click: previous mode. */
+/**
+ * Left click: next mode. Right click: previous mode.
+ */
 public final class ModeElement extends SettingElement<ModeSetting> {
     public ModeElement(ModeSetting setting) {
         super(setting);

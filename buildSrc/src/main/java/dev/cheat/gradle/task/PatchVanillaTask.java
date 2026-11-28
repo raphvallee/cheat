@@ -8,15 +8,7 @@ import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.provider.Property;
-import org.gradle.api.tasks.Classpath;
-import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.InputFile;
-import org.gradle.api.tasks.InputFiles;
-import org.gradle.api.tasks.Internal;
-import org.gradle.api.tasks.OutputFile;
-import org.gradle.api.tasks.PathSensitive;
-import org.gradle.api.tasks.PathSensitivity;
-import org.gradle.api.tasks.TaskAction;
+import org.gradle.api.tasks.*;
 
 import java.io.File;
 
@@ -29,7 +21,9 @@ public abstract class PatchVanillaTask extends DefaultTask {
     @PathSensitive(PathSensitivity.NONE)
     public abstract RegularFileProperty getVanillaJar();
 
-    /** The compiled hooks class. A file collection so that a missing file gets the patcher's own error. */
+    /**
+     * The compiled hooks class. A file collection so that a missing file gets the patcher's own error.
+     */
     @InputFiles
     @PathSensitive(PathSensitivity.NONE)
     public abstract ConfigurableFileCollection getHooksClass();
@@ -40,7 +34,9 @@ public abstract class PatchVanillaTask extends DefaultTask {
     @Internal
     public abstract DirectoryProperty getJdkHome();
 
-    /** Version of the JDK at {@link #getJdkHome()}, whose classes are used for frame computation. */
+    /**
+     * Version of the JDK at {@link #getJdkHome()}, whose classes are used for frame computation.
+     */
     @Input
     public abstract Property<String> getJdkVersion();
 

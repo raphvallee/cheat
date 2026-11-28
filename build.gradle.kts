@@ -5,7 +5,7 @@ import dev.cheat.gradle.task.CreateVersionTask
 import dev.cheat.gradle.task.InstallClientTask
 import dev.cheat.gradle.task.MergeJarTask
 import dev.cheat.gradle.task.PatchVanillaTask
-import java.util.UUID
+import java.util.*
 
 plugins {
     java
@@ -22,14 +22,15 @@ version = clientVersion
 // Downloads (once, cached in the Gradle user home) the vanilla client jar and its libraries.
 val mc = MinecraftSetup.resolve(gradle.gradleUserHomeDir.toPath(), mcVersion)
 
-val launcherDir: File = providers.gradleProperty("minecraft_dir").orNull?.takeIf { it.isNotBlank() }?.let(::File) ?: run {
-    val home = System.getProperty("user.home")
-    when (MinecraftSetup.Rules.osName()) {
-        "windows" -> File(System.getenv("APPDATA") ?: "$home/AppData/Roaming", ".minecraft")
-        "osx" -> File(home, "Library/Application Support/minecraft")
-        else -> File(home, ".minecraft")
+val launcherDir: File =
+    providers.gradleProperty("minecraft_dir").orNull?.takeIf { it.isNotBlank() }?.let(::File) ?: run {
+        val home = System.getProperty("user.home")
+        when (MinecraftSetup.Rules.osName()) {
+            "windows" -> File(System.getenv("APPDATA") ?: "$home/AppData/Roaming", ".minecraft")
+            "osx" -> File(home, "Library/Application Support/minecraft")
+            else -> File(home, ".minecraft")
+        }
     }
-}
 
 java {
     toolchain.languageVersion = JavaLanguageVersion.of(25)
@@ -122,7 +123,8 @@ fun JavaExec.configureRun(session: () -> List<String>) {
     doFirst {
         runDir.mkdirs()
         val natives = File(runDir, "natives").absolutePath.replace('\\', '/')
-        jvmArgs(mc.jvmArguments()
+        jvmArgs(
+            mc.jvmArguments()
             .filter { it != "-cp" && it != "\${classpath}" }
             .map {
                 it.replace("\${natives_directory}", natives)
@@ -174,7 +176,8 @@ tasks.register<JavaExec>("genSources") {
     val out = layout.buildDirectory.dir("minecraft-sources").get().asFile
     outputs.dir(out)
     doFirst { out.mkdirs() }
-    args(listOf("-dgs=1", "-rsy=1", "-log=WARN", "--only=net/minecraft", "--only=com/mojang") +
-        mc.libraries.map { "-e=$it" } + listOf(mc.clientJar.toString(), out.absolutePath))
+    args(
+        listOf("-dgs=1", "-rsy=1", "-log=WARN", "--only=net/minecraft", "--only=com/mojang") +
+            mc.libraries.map { "-e=$it" } + listOf(mc.clientJar.toString(), out.absolutePath))
     maxHeapSize = "4G"
 }

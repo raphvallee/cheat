@@ -10,20 +10,9 @@ import net.minecraft.world.phys.Vec3;
 
 public final class Fly extends Module {
 
-    enum FlyMode {
-        Creative("Creative"), Jetpack("JetPack");
-
-        final String name;
-
-        FlyMode(String name) {
-            this.name = name;
-        }
-    }
-
     private final ModeSetting mode = mode("Mode", FlyMode.Creative.name, FlyMode.Creative.name, FlyMode.Jetpack.name);
     private final NumberSetting jumpForce = number("Jump Force", 0.17, 0, 0.5, 0.01).visibleIf(() -> mode.is(FlyMode.Jetpack.name));
     private final NumberSetting maxVerticalSpeed = number("Max Speed", 15, 0, 50, 0.5).visibleIf(() -> mode.is(FlyMode.Jetpack.name));
-
     public Fly() {
         super("Fly", "Makes you fly like a bird", Category.MOVEMENT);
     }
@@ -50,6 +39,16 @@ public final class Fly extends Module {
         assert mc.player != null;
         if (mode.is(FlyMode.Creative.name)) {
             mc.player.getAbilities().flying = false;
+        }
+    }
+
+    enum FlyMode {
+        Creative("Creative"), Jetpack("JetPack");
+
+        final String name;
+
+        FlyMode(String name) {
+            this.name = name;
         }
     }
 }

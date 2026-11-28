@@ -2,14 +2,7 @@ package dev.cheat.gradle.patch;
 
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.InsnList;
-import org.objectweb.asm.tree.InsnNode;
-import org.objectweb.asm.tree.JumpInsnNode;
-import org.objectweb.asm.tree.LabelNode;
-import org.objectweb.asm.tree.MethodInsnNode;
-import org.objectweb.asm.tree.MethodNode;
-import org.objectweb.asm.tree.VarInsnNode;
+import org.objectweb.asm.tree.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,8 +24,6 @@ import java.util.Objects;
  * returning {@code true} makes the vanilla method return immediately.</p>
  */
 public final class Injection {
-    public enum At { HEAD, RETURN, INVOKE }
-
     final String owner;
     String name;
     String desc;
@@ -43,7 +34,6 @@ public final class Injection {
     String invokeName;
     String invokeDesc;
     int ordinal = 0;
-
     private Injection(String owner) {
         this.owner = owner;
     }
@@ -63,7 +53,9 @@ public final class Injection {
         return this;
     }
 
-    /** Injects right before the {@code ordinal}-th call (0-based) to the given method inside the target. */
+    /**
+     * Injects right before the {@code ordinal}-th call (0-based) to the given method inside the target.
+     */
     public Injection beforeInvoke(String owner, String name, String desc, int ordinal) {
         this.at = At.INVOKE;
         this.invokeOwner = owner;
@@ -91,7 +83,9 @@ public final class Injection {
         return owner + "." + name + desc;
     }
 
-    /** Descriptor the hook method must have. */
+    /**
+     * Descriptor the hook method must have.
+     */
     String hookDesc(boolean targetIsStatic) {
         List<Type> params = new ArrayList<>();
         if (!targetIsStatic) params.add(Type.getObjectType(owner));
@@ -129,7 +123,9 @@ public final class Injection {
         return null;
     }
 
-    /** Applies this injection to {@code method}. Returns how many call sites were inserted. */
+    /**
+     * Applies this injection to {@code method}. Returns how many call sites were inserted.
+     */
     int apply(MethodNode method, String hooksClass) {
         boolean isStatic = (method.access & Opcodes.ACC_STATIC) != 0;
         String hookDesc = hookDesc(isStatic);
@@ -182,4 +178,6 @@ public final class Injection {
         String where = at == At.INVOKE ? "before " + invokeOwner + "." + invokeName + invokeDesc + " #" + ordinal : at.name();
         return target() + " @ " + where + " -> " + hook + (cancellable ? " (cancellable)" : "");
     }
+
+    public enum At {HEAD, RETURN, INVOKE}
 }

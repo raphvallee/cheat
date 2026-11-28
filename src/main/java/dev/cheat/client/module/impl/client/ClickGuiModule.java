@@ -15,28 +15,17 @@ import dev.cheat.client.util.ColorUtil;
 import java.util.EnumMap;
 import java.util.Map;
 
-/** Opens the ClickGUI (Right Shift by default) and holds GUI-wide settings such as the accent color. */
+/**
+ * Opens the ClickGUI (Right Shift by default) and holds GUI-wide settings such as the accent color.
+ */
 public final class ClickGuiModule extends Module {
     public final ColorSetting accent = color("Accent", 0xFF4FA3FF);
     public final BooleanSetting rainbow = bool("Rainbow", false);
     public final NumberSetting rainbowSpeed = number("Rainbow speed", 1, 0.1, 5, 0.1).visibleIf(rainbow::isEnabled);
     public final NumberSetting scale = number("Scale", 1, 0.5, 2, 0.05).typed()
-            .describedAs("Size of the GUI; stays the same whatever the game's GUI scale is. Capped to fit the window.");
+                                                                       .describedAs("Size of the GUI; stays the same whatever the game's GUI scale is. Capped to fit the window.");
     public final BooleanSetting blur = bool("Blur", false);
     public final BooleanSetting descriptions = bool("Descriptions", true);
-
-    /** Saved position and state of each category panel. */
-    public static final class PanelState {
-        public int x;
-        public int y;
-        public boolean open = true;
-
-        PanelState(int x, int y) {
-            this.x = x;
-            this.y = y;
-        }
-    }
-
     private final Map<Category, PanelState> panels = new EnumMap<>(Category.class);
 
     public ClickGuiModule() {
@@ -47,6 +36,13 @@ public final class ClickGuiModule extends Module {
             panels.put(category, new PanelState(x, 6));
             x += 118;
         }
+    }
+
+    /**
+     * Accent color of the running client (works from anywhere after startup).
+     */
+    public static int accent(long offset) {
+        return Client.modules().getModule(ClickGuiModule.class).accentColor(offset);
     }
 
     @Override
@@ -66,15 +62,12 @@ public final class ClickGuiModule extends Module {
         return panels.get(category);
     }
 
-    /** Accent color for GUI and HUD; {@code offset} shifts the rainbow phase. */
+    /**
+     * Accent color for GUI and HUD; {@code offset} shifts the rainbow phase.
+     */
     public int accentColor(long offset) {
         if (!rainbow.isEnabled()) return accent.getArgb();
         return ColorUtil.rainbow(offset, rainbowSpeed.getDouble(), 0.6f, 1f);
-    }
-
-    /** Accent color of the running client (works from anywhere after startup). */
-    public static int accent(long offset) {
-        return Client.modules().getModule(ClickGuiModule.class).accentColor(offset);
     }
 
     public JsonObject panelsToJson() {
@@ -100,6 +93,20 @@ public final class ClickGuiModule extends Module {
             } catch (RuntimeException ignored) {
                 // Unknown category or malformed entry: keep defaults.
             }
+        }
+    }
+
+    /**
+     * Saved position and state of each category panel.
+     */
+    public static final class PanelState {
+        public int x;
+        public int y;
+        public boolean open = true;
+
+        PanelState(int x, int y) {
+            this.x = x;
+            this.y = y;
         }
     }
 }

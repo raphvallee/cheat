@@ -5,9 +5,13 @@ import com.mojang.blaze3d.platform.InputConstants;
 import java.util.Locale;
 import java.util.Map;
 
-/** Converts between key codes ({@code InputConstants.KEY_*}) and readable names. */
+/**
+ * Converts between key codes ({@code InputConstants.KEY_*}) and readable names.
+ */
 public final class KeyUtil {
-    /** Key code meaning "not bound". */
+    /**
+     * Key code meaning "not bound".
+     */
     public static final int NONE = InputConstants.UNKNOWN.getValue();
     private static final int KEY_LIMIT = 512;
 
@@ -21,14 +25,17 @@ public final class KeyUtil {
             Map.entry("pgup", "page.up"), Map.entry("pgdown", "page.down"),
             Map.entry("up", "up"), Map.entry("down", "down"), Map.entry("left", "left"), Map.entry("right", "right"));
 
-    private KeyUtil() {}
+    private KeyUtil() {
+    }
 
     public static String name(int key) {
         if (key == NONE) return "None";
         return InputConstants.Type.KEYBOARD.getOrCreate(key).getDisplayName().getString();
     }
 
-    /** Parses names such as {@code r}, {@code f6}, {@code rshift}, {@code right.shift} or {@code key.keyboard.r}. */
+    /**
+     * Parses names such as {@code r}, {@code f6}, {@code rshift}, {@code right.shift} or {@code key.keyboard.r}.
+     */
     public static boolean isNone(String name) {
         String n = name.toLowerCase(Locale.ROOT).trim();
         return n.isEmpty() || n.equals("none") || n.equals("null");

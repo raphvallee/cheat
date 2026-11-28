@@ -15,6 +15,14 @@ public final class ConfigCommand extends Command {
         super("config", "Saves, loads or lists named configs.", "<save|load|list> [name]", "cfg");
     }
 
+    private static <T> T invalidName(Supplier<T> action) throws CommandException {
+        try {
+            return action.get();
+        } catch (IllegalArgumentException e) {
+            throw new CommandException(e.getMessage());
+        }
+    }
+
     @Override
     public void execute(String[] args) throws CommandException {
         if (args.length == 0) throw CommandException.usage();
@@ -31,7 +39,8 @@ public final class ConfigCommand extends Command {
                 ConfigManager.LoadResult result = invalidName(() -> Client.config().load(args[1]));
                 switch (result) {
                     case NOT_FOUND -> throw new CommandException("Config '" + args[1] + "' not found.");
-                    case INVALID -> throw new CommandException("Config '" + args[1] + "' is not valid JSON, see the game log.");
+                    case INVALID ->
+                            throw new CommandException("Config '" + args[1] + "' is not valid JSON, see the game log.");
                     case LOADED -> ChatUtil.success("Loaded config '" + args[1] + "'.");
                 }
             }
@@ -40,14 +49,6 @@ public final class ConfigCommand extends Command {
                 ChatUtil.info(configs.isEmpty() ? "No saved configs." : "Configs: " + String.join(", ", configs));
             }
             default -> throw CommandException.usage();
-        }
-    }
-
-    private static <T> T invalidName(Supplier<T> action) throws CommandException {
-        try {
-            return action.get();
-        } catch (IllegalArgumentException e) {
-            throw new CommandException(e.getMessage());
         }
     }
 }

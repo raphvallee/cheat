@@ -2,7 +2,9 @@ package dev.cheat.client.gui.clickgui;
 
 import dev.cheat.client.module.impl.client.ClickGuiModule;
 
-/** ClickGUI colors and sizes in one place. Colors are ARGB. */
+/**
+ * ClickGUI colors and sizes in one place. Colors are ARGB.
+ */
 public final class Theme {
     public static final int PANEL_WIDTH = 112;
     public static final int HEADER_HEIGHT = 18;
@@ -21,7 +23,8 @@ public final class Theme {
     public static final int SLIDER_TRACK = 0xFF2E2E38;
     public static final int TOOLTIP = 0xE0101014;
 
-    private Theme() {}
+    private Theme() {
+    }
 
     public static int accent() {
         return ClickGuiModule.accent(0);

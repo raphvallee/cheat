@@ -1,6 +1,8 @@
 package dev.cheat.client.util;
 
-/** Millisecond stopwatch, e.g. for delays and CPS limits. */
+/**
+ * Millisecond stopwatch, e.g. for delays and CPS limits.
+ */
 public final class TimerUtil {
     private long start = now();
 
@@ -12,7 +14,9 @@ public final class TimerUtil {
         return now() - start >= millis;
     }
 
-    /** Returns true and resets when {@code millis} have passed. */
+    /**
+     * Returns true and resets when {@code millis} have passed.
+     */
     public boolean passedAndReset(long millis) {
         if (!hasElapsed(millis)) return false;
         reset();

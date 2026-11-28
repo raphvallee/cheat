@@ -2,20 +2,28 @@
 
 # Cheat
 
-A client template for Minecraft **26.3** in the style of LiquidBounce. It is built by patching the vanilla game jar, so it needs no Fabric or Forge loader.
+A client template for Minecraft **26.3** in the style of LiquidBounce. It is built by patching the vanilla game jar, so
+it needs no Fabric or Forge loader.
 
 ## How it works
 
-1. Gradle downloads the vanilla 26.3 client jar and its libraries from Mojang and caches them in `~/.gradle/caches/client-template`. Since 26.1 the jar ships unobfuscated, so no mappings are needed.
-2. `patchVanilla` uses ASM to insert calls to `dev.cheat.client.hook.Hooks` into vanilla methods and removes Mojang's signature, writing `build/libs/patched-vanilla-26.3.jar`. The list of patches is in [`GamePatches.java`](buildSrc/src/main/java/dev/cheat/gradle/patch/GamePatches.java). It only reads `Hooks.class` from the client, so other client changes do not re-run it.
-3. `patchJar` merges the client classes and resources into the patched jar, writing `build/libs/Cheat-26.3.jar`. `runClient` skips this step and puts the patched jar and the compiled client classes on the classpath.
+1. Gradle downloads the vanilla 26.3 client jar and its libraries from Mojang and caches them in
+   `~/.gradle/caches/client-template`. Since 26.1 the jar ships unobfuscated, so no mappings are needed.
+2. `patchVanilla` uses ASM to insert calls to `dev.cheat.client.hook.Hooks` into vanilla methods and removes Mojang's
+   signature, writing `build/libs/patched-vanilla-26.3.jar`. The list of patches is in [
+   `GamePatches.java`](buildSrc/src/main/java/dev/cheat/gradle/patch/GamePatches.java). It only reads `Hooks.class` from
+   the client, so other client changes do not re-run it.
+3. `patchJar` merges the client classes and resources into the patched jar, writing `build/libs/Cheat-26.3.jar`.
+   `runClient` skips this step and puts the patched jar and the compiled client classes on the classpath.
 4. `createVersion` writes a standalone launcher version, `build/version/Cheat-26.3/` (a `.json` and a `.jar`).
 
-If a patch target or a hook signature stops matching, for example after a Minecraft update, the build fails. The error names the missing method and gives the exact `Hooks` signature it expects.
+If a patch target or a hook signature stops matching, for example after a Minecraft update, the build fails. The error
+names the missing method and gives the exact `Hooks` signature it expects.
 
 ## Requirements
 
-- JDK 25 to run Gradle. The Minecraft Launcher ships one at `C:\Program Files (x86)\Minecraft Launcher\runtime\java-runtime-epsilon\windows-x64\java-runtime-epsilon`.
+- JDK 25 to run Gradle. The Minecraft Launcher ships one at
+  `C:\Program Files (x86)\Minecraft Launcher\runtime\java-runtime-epsilon\windows-x64\java-runtime-epsilon`.
 - If no JDK 25 is installed, the foojay plugin provisions one for compilation.
 
 ```sh
@@ -24,35 +32,39 @@ export JAVA_HOME="/c/Program Files (x86)/Minecraft Launcher/runtime/java-runtime
 
 ## Tasks
 
-| Command | What it does |
-| --- | --- |
-| `./gradlew build` | Builds the patched jar and the launcher version folder |
-| `./gradlew patchVanilla` | Only applies the patches to the vanilla jar |
-| `./gradlew runClient` | Starts an offline dev session with `run/` as the game directory |
-| `./gradlew runClient -PquickWorld="New World"` | Same, but joins a world from `run/saves` directly |
-| `./gradlew runClientOnline` | Starts a dev session logged in with your Microsoft account, so you can join online-mode servers. The first run prints a code to enter at microsoft.com/link. The login is cached in `~/.gradle/caches/client-template/auth/microsoft.json`, delete it to log out or switch accounts |
-| `./gradlew runClientOnline -PquickServer=host:port` | Same, but joins that server directly |
-| `./gradlew installClient` | Copies the version into `.minecraft/versions` and adds a launcher installation. The first run keeps the original launcher profile files as `*.bak`; later runs never overwrite them. Close the launcher first |
-| `./gradlew genSources` | Decompiles Minecraft into `build/minecraft-sources` so you can read it |
+| Command                                             | What it does                                                                                                                                                                                                                                                                        |
+|-----------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `./gradlew build`                                   | Builds the patched jar and the launcher version folder                                                                                                                                                                                                                              |
+| `./gradlew patchVanilla`                            | Only applies the patches to the vanilla jar                                                                                                                                                                                                                                         |
+| `./gradlew runClient`                               | Starts an offline dev session with `run/` as the game directory                                                                                                                                                                                                                     |
+| `./gradlew runClient -PquickWorld="New World"`      | Same, but joins a world from `run/saves` directly                                                                                                                                                                                                                                   |
+| `./gradlew runClientOnline`                         | Starts a dev session logged in with your Microsoft account, so you can join online-mode servers. The first run prints a code to enter at microsoft.com/link. The login is cached in `~/.gradle/caches/client-template/auth/microsoft.json`, delete it to log out or switch accounts |
+| `./gradlew runClientOnline -PquickServer=host:port` | Same, but joins that server directly                                                                                                                                                                                                                                                |
+| `./gradlew installClient`                           | Copies the version into `.minecraft/versions` and adds a launcher installation. The first run keeps the original launcher profile files as `*.bak`; later runs never overwrite them. Close the launcher first                                                                       |
+| `./gradlew genSources`                              | Decompiles Minecraft into `build/minecraft-sources` so you can read it                                                                                                                                                                                                              |
 
 The client name, version and Minecraft version are set in `gradle.properties`.
 
 ## In game
 
 - **Right Shift** opens the ClickGUI.
-  - Left-click a module to toggle it. Right-click it to show its settings and key bind.
-  - Drag a panel by its header. Right-click a header to collapse the panel.
-  - Scroll to move through long panels. Right-click a slider to reset it.
-  - Set the GUI size with ClickGUI > Scale: click the value, type a number (0.5-2) and press Enter. The scale is capped so the GUI always fits in the window.
+    - Left-click a module to toggle it. Right-click it to show its settings and key bind.
+    - Drag a panel by its header. Right-click a header to collapse the panel.
+    - Scroll to move through long panels. Right-click a slider to reset it.
+    - Set the GUI size with ClickGUI > Scale: click the value, type a number (0.5-2) and press Enter. The scale is
+      capped so the GUI always fits in the window.
 - Chat commands use the `.` prefix:
-  - `.help`
-  - `.t <module>` toggles a module.
-  - `.bind <module> <key|none>` sets or clears a key bind (keyboard keys only).
-  - `.set <module> [setting] [value]` lists or changes settings.
-  - `.hide <module>` hides a module from the HUD list.
-  - `.config <save|load|list> [name]` manages named configs. Names are case-insensitive and use letters, digits, `_`, `-` and `.`. Loading a config replaces everything: values it does not contain go back to their defaults.
-  - A chat message is a command only when the `.` is followed by a letter, so `...` or `.5` are sent as normal chat.
-- The config is stored in `<gameDir>/cheat/config.json`. It is saved when the GUI closes, when the game exits and when it crashes. A config that cannot be read is renamed to `config.broken-<date>.json` and the defaults are used, so it is never overwritten.
+    - `.help`
+    - `.t <module>` toggles a module.
+    - `.bind <module> <key|none>` sets or clears a key bind (keyboard keys only).
+    - `.set <module> [setting] [value]` lists or changes settings.
+    - `.hide <module>` hides a module from the HUD list.
+    - `.config <save|load|list> [name]` manages named configs. Names are case-insensitive and use letters, digits, `_`,
+      `-` and `.`. Loading a config replaces everything: values it does not contain go back to their defaults.
+    - A chat message is a command only when the `.` is followed by a letter, so `...` or `.5` are sent as normal chat.
+- The config is stored in `<gameDir>/cheat/config.json`. It is saved when the GUI closes, when the game exits and when
+  it crashes. A config that cannot be read is renamed to `config.broken-<date>.json` and the defaults are used, so it is
+  never overwritten.
 
 ## Layout
 
@@ -73,18 +85,18 @@ src/main/java/dev/cheat/client/
 
 ## Events
 
-| Event | Fired from | Notes |
-| --- | --- | --- |
-| `TickEvent` (PRE/POST) | `Minecraft.tick` | every client tick |
-| `PlayerTickEvent` | `LocalPlayer.tick` | in world only, main module logic |
-| `MotionEvent` (PRE/POST) | `LocalPlayer.sendChanges` | yaw, pitch and onGround can be spoofed in PRE, also while riding |
-| `PacketSendEvent` | `Connection.send` | cancellable, client connection only |
-| `PacketReceiveEvent` | `Connection.channelRead0` / `ClientPacketListener.handleBundlePacket` | cancellable, **Netty thread** (bundled packets: client thread) |
-| `KeyInputEvent` / `MouseInputEvent` | `KeyboardHandler.keyPress` / `MouseHandler.onButton` | cancellable |
-| `Render2DEvent` | `Hud.extractRenderState` | draw with `GuiGraphicsExtractor`, ARGB colors |
-| `Render3DEvent` | `Minecraft.renderFrame` | draw with `Gizmos` / `RenderUtil.box` in world coordinates |
-| `ChatSendEvent` | `ChatScreen.handleChatInput` | cancellable |
-| `WorldChangeEvent` | `Minecraft.setLevel` / `disconnect` / `clearClientLevel` | level is `null` when leaving |
+| Event                               | Fired from                                                            | Notes                                                            |
+|-------------------------------------|-----------------------------------------------------------------------|------------------------------------------------------------------|
+| `TickEvent` (PRE/POST)              | `Minecraft.tick`                                                      | every client tick                                                |
+| `PlayerTickEvent`                   | `LocalPlayer.tick`                                                    | in world only, main module logic                                 |
+| `MotionEvent` (PRE/POST)            | `LocalPlayer.sendChanges`                                             | yaw, pitch and onGround can be spoofed in PRE, also while riding |
+| `PacketSendEvent`                   | `Connection.send`                                                     | cancellable, client connection only                              |
+| `PacketReceiveEvent`                | `Connection.channelRead0` / `ClientPacketListener.handleBundlePacket` | cancellable, **Netty thread** (bundled packets: client thread)   |
+| `KeyInputEvent` / `MouseInputEvent` | `KeyboardHandler.keyPress` / `MouseHandler.onButton`                  | cancellable                                                      |
+| `Render2DEvent`                     | `Hud.extractRenderState`                                              | draw with `GuiGraphicsExtractor`, ARGB colors                    |
+| `Render3DEvent`                     | `Minecraft.renderFrame`                                               | draw with `Gizmos` / `RenderUtil.box` in world coordinates       |
+| `ChatSendEvent`                     | `ChatScreen.handleChatInput`                                          | cancellable                                                      |
+| `WorldChangeEvent`                  | `Minecraft.setLevel` / `disconnect` / `clearClientLevel`              | level is `null` when leaving                                     |
 
 ## Adding a module
 
@@ -110,7 +122,8 @@ public final class Fly extends Module {
 }
 ```
 
-Then register it in `ModuleManager.registerDefaults()`. It appears in the GUI, the config and the commands automatically. The bundled modules double as examples:
+Then register it in `ModuleManager.registerDefaults()`. It appears in the GUI, the config and the commands
+automatically. The bundled modules double as examples:
 
 - `Sprint` uses `PlayerTickEvent`.
 - `NoFall` uses `MotionEvent`.
@@ -129,5 +142,6 @@ Use `genSources` and `javap -p -s` to find method names and descriptors.
 ## Notes
 
 - The title screen shows "Minecraft 26.3 (Modded)" because the jar is no longer Mojang-signed.
-- `runClient` uses an offline account, so it works in singleplayer and on offline-mode servers. For online servers, use `installClient` and start the game from the official launcher.
+- `runClient` uses an offline account, so it works in singleplayer and on offline-mode servers. For online servers, use
+  `installClient` and start the game from the official launcher.
 - Using a client like this on servers that forbid it can get your account banned.

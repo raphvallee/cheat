@@ -6,8 +6,12 @@ import com.google.gson.JsonPrimitive;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
-/** An ARGB color, edited in the ClickGUI with hue/saturation/brightness/alpha sliders. */
+/**
+ * An ARGB color, edited in the ClickGUI with hue/saturation/brightness/alpha sliders.
+ */
 public final class ColorSetting extends Setting<Integer> {
+    private static final Pattern HEX = Pattern.compile("[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8}");
+
     public ColorSetting(String name, int defaultArgb) {
         super(name, defaultArgb);
     }
@@ -25,9 +29,9 @@ public final class ColorSetting extends Setting<Integer> {
         return String.format(Locale.ROOT, "#%08X", get());
     }
 
-    private static final Pattern HEX = Pattern.compile("[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8}");
-
-    /** Accepts {@code #RRGGBB} or {@code #AARRGGBB}. */
+    /**
+     * Accepts {@code #RRGGBB} or {@code #AARRGGBB}.
+     */
     @Override
     public void parse(String input) {
         String trimmed = input.trim();

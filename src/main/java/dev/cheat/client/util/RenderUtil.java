@@ -11,9 +11,12 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
-/** Drawing helpers for 2D (GUI coordinates, ARGB colors) and 3D (world coordinates, via Gizmos). */
+/**
+ * Drawing helpers for 2D (GUI coordinates, ARGB colors) and 3D (world coordinates, via Gizmos).
+ */
 public final class RenderUtil {
-    private RenderUtil() {}
+    private RenderUtil() {
+    }
 
     // ---------------------------------------------------------------- 2D
 
@@ -51,7 +54,9 @@ public final class RenderUtil {
 
     // ---------------------------------------------------------------- 3D (call from Render3DEvent)
 
-    /** Bounding box of {@code entity} interpolated to the current frame. */
+    /**
+     * Bounding box of {@code entity} interpolated to the current frame.
+     */
     public static AABB interpolatedBox(Entity entity, float partialTicks) {
         double dx = Mth.lerp(partialTicks, entity.xOld, entity.getX()) - entity.getX();
         double dy = Mth.lerp(partialTicks, entity.yOld, entity.getY()) - entity.getY();
@@ -63,7 +68,9 @@ public final class RenderUtil {
         box(box, color, lineWidth, false);
     }
 
-    /** @param throughWalls draw on top of the world instead of being hidden by blocks */
+    /**
+     * @param throughWalls draw on top of the world instead of being hidden by blocks
+     */
     public static void box(AABB box, int color, float lineWidth, boolean throughWalls) {
         onTop(Gizmos.cuboid(box, GizmoStyle.stroke(color, lineWidth)), throughWalls);
     }
@@ -72,7 +79,9 @@ public final class RenderUtil {
         filledBox(box, lineColor, lineWidth, fillColor, false);
     }
 
-    /** @param throughWalls draw on top of the world instead of being hidden by blocks */
+    /**
+     * @param throughWalls draw on top of the world instead of being hidden by blocks
+     */
     public static void filledBox(AABB box, int lineColor, float lineWidth, int fillColor, boolean throughWalls) {
         onTop(Gizmos.cuboid(box, GizmoStyle.strokeAndFill(lineColor, lineWidth, fillColor)), throughWalls);
     }

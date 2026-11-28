@@ -12,14 +12,11 @@ import dev.cheat.client.module.impl.player.NoFall;
 import dev.cheat.client.module.impl.render.Esp;
 import dev.cheat.client.util.KeyUtil;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
-/** Owns every module and handles their key binds. */
+/**
+ * Owns every module and handles their key binds.
+ */
 public final class ModuleManager {
     private final Map<Class<? extends Module>, Module> byClass = new LinkedHashMap<>();
     private final List<Module> modules = new ArrayList<>();
@@ -28,7 +25,9 @@ public final class ModuleManager {
         eventBus.subscribe(this);
     }
 
-    /** Add new modules here. */
+    /**
+     * Add new modules here.
+     */
     public void registerDefaults() {
         register(
                 // Combat
@@ -79,7 +78,9 @@ public final class ModuleManager {
         return (T) byClass.get(type);
     }
 
-    /** Finds a module by name, ignoring case and spaces. */
+    /**
+     * Finds a module by name, ignoring case and spaces.
+     */
     public Module getModule(String name) {
         String wanted = name.replace(" ", "");
         for (Module module : modules) {

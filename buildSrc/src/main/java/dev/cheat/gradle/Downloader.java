@@ -14,15 +14,18 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.HexFormat;
 
-/** Small cached HTTP downloader with SHA-1 verification. */
+/**
+ * Small cached HTTP downloader with SHA-1 verification.
+ */
 public final class Downloader {
     private static final int ATTEMPTS = 3;
     private static final HttpClient HTTP = HttpClient.newBuilder()
-            .followRedirects(HttpClient.Redirect.NORMAL)
-            .connectTimeout(Duration.ofSeconds(30))
-            .build();
+                                                     .followRedirects(HttpClient.Redirect.NORMAL)
+                                                     .connectTimeout(Duration.ofSeconds(30))
+                                                     .build();
 
-    private Downloader() {}
+    private Downloader() {
+    }
 
     /**
      * Downloads {@code url} to {@code target} unless it already exists with the expected hash.
@@ -97,9 +100,9 @@ public final class Downloader {
 
     private static InputStream open(String url) throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder(URI.create(url))
-                .timeout(Duration.ofMinutes(5))
-                .header("User-Agent", "client-template-build")
-                .build();
+                                         .timeout(Duration.ofMinutes(5))
+                                         .header("User-Agent", "client-template-build")
+                                         .build();
         HttpResponse<InputStream> response = HTTP.send(request, HttpResponse.BodyHandlers.ofInputStream());
         if (response.statusCode() != 200) {
             response.body().close();

@@ -7,12 +7,7 @@ import org.gradle.api.DefaultTask;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.provider.Property;
-import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.InputFile;
-import org.gradle.api.tasks.OutputDirectory;
-import org.gradle.api.tasks.PathSensitive;
-import org.gradle.api.tasks.PathSensitivity;
-import org.gradle.api.tasks.TaskAction;
+import org.gradle.api.tasks.*;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -28,6 +23,10 @@ import java.nio.file.StandardCopyOption;
  */
 public abstract class CreateVersionTask extends DefaultTask {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
+
+    private static Path path(RegularFileProperty property) {
+        return property.get().getAsFile().toPath();
+    }
 
     @InputFile
     @PathSensitive(PathSensitivity.NONE)
@@ -60,9 +59,5 @@ public abstract class CreateVersionTask extends DefaultTask {
         }
         Files.copy(path(getClientJar()), dir.resolve(id + ".jar"), StandardCopyOption.REPLACE_EXISTING);
         getLogger().lifecycle("Created launcher version " + dir);
-    }
-
-    private static Path path(RegularFileProperty property) {
-        return property.get().getAsFile().toPath();
     }
 }

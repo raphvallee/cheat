@@ -13,10 +13,10 @@ import java.util.function.Consumer;
 public abstract class Setting<T> {
     private final String name;
     private final T defaultValue;
+    private final List<Consumer<T>> listeners = new ArrayList<>();
     private T value;
     private String description = "";
     private BooleanSupplier visibility = () -> true;
-    private final List<Consumer<T>> listeners = new ArrayList<>();
 
     protected Setting(String name, T defaultValue) {
         this.name = name;
@@ -32,7 +32,9 @@ public abstract class Setting<T> {
         return value;
     }
 
-    /** Sets the value (validated by {@link #validate}) and notifies listeners when it changed. */
+    /**
+     * Sets the value (validated by {@link #validate}) and notifies listeners when it changed.
+     */
     public void set(T newValue) {
         T validated = validate(newValue);
         if (validated.equals(value)) return;
@@ -56,7 +58,9 @@ public abstract class Setting<T> {
         return visibility.getAsBoolean();
     }
 
-    /** Only show this setting when {@code condition} is true, e.g. {@code visibleIf(() -> mode.is("Packet"))}. */
+    /**
+     * Only show this setting when {@code condition} is true, e.g. {@code visibleIf(() -> mode.is("Packet"))}.
+     */
     @SuppressWarnings("unchecked")
     public <S extends Setting<T>> S visibleIf(BooleanSupplier condition) {
         this.visibility = condition;
@@ -69,7 +73,9 @@ public abstract class Setting<T> {
         return (S) this;
     }
 
-    /** Runs {@code listener} with the new value whenever it changes. */
+    /**
+     * Runs {@code listener} with the new value whenever it changes.
+     */
     @SuppressWarnings("unchecked")
     public <S extends Setting<T>> S onChange(Consumer<T> listener) {
         listeners.add(listener);
@@ -80,15 +86,21 @@ public abstract class Setting<T> {
         return value;
     }
 
-    /** Parses user input from the {@code .set} command. Throws {@link IllegalArgumentException} when invalid. */
+    /**
+     * Parses user input from the {@code .set} command. Throws {@link IllegalArgumentException} when invalid.
+     */
     public abstract void parse(String input);
 
     public abstract JsonElement toJson();
 
-    /** Loads a saved value; invalid data must be ignored, not thrown. */
+    /**
+     * Loads a saved value; invalid data must be ignored, not thrown.
+     */
     public abstract void fromJson(JsonElement json);
 
-    /** Human readable value for chat and GUI. */
+    /**
+     * Human readable value for chat and GUI.
+     */
     public String display() {
         return String.valueOf(value);
     }

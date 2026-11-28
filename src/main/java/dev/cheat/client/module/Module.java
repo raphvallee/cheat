@@ -1,11 +1,7 @@
 package dev.cheat.client.module;
 
 import dev.cheat.client.Client;
-import dev.cheat.client.module.setting.BooleanSetting;
-import dev.cheat.client.module.setting.ColorSetting;
-import dev.cheat.client.module.setting.ModeSetting;
-import dev.cheat.client.module.setting.NumberSetting;
-import dev.cheat.client.module.setting.Setting;
+import dev.cheat.client.module.setting.*;
 import dev.cheat.client.util.KeyUtil;
 import dev.cheat.client.util.MinecraftInstance;
 
@@ -28,7 +24,7 @@ import java.util.List;
  *     private void onTick(PlayerTickEvent event) { ... }
  * }
  * }</pre>
- *
+ * <p>
  * Register it in {@link ModuleManager#registerDefaults()}. While enabled, the module's {@code @Subscribe}
  * methods receive events. {@link #onEnable()} / {@link #onDisable()} may run outside of a world (for example
  * when the config loads at startup), so null-check {@code mc.player} / {@code mc.level}.
@@ -58,11 +54,15 @@ public abstract class Module implements MinecraftInstance {
 
     // ---------------------------------------------------------------- lifecycle
 
-    /** Called when the module is turned on, after it was subscribed to events. */
+    /**
+     * Called when the module is turned on, after it was subscribed to events.
+     */
     protected void onEnable() {
     }
 
-    /** Called when the module is turned off, after it was unsubscribed from events. */
+    /**
+     * Called when the module is turned off, after it was unsubscribed from events.
+     */
     protected void onDisable() {
     }
 
@@ -70,27 +70,11 @@ public abstract class Module implements MinecraftInstance {
         setEnabled(!enabled);
     }
 
-    public final void setEnabled(boolean enabled) {
-        if (this.enabled == enabled) return;
-        this.enabled = enabled;
-        try {
-            if (enabled) {
-                Client.events().subscribe(this);
-                onEnable();
-            } else {
-                Client.events().unsubscribe(this);
-                onDisable();
-            }
-        } catch (Throwable t) {
-            Client.LOGGER.error("Error while {} {}", enabled ? "enabling" : "disabling", name, t);
-        }
-    }
-
-    // ---------------------------------------------------------------- settings
-
     protected final BooleanSetting bool(String name, boolean defaultValue) {
         return addSetting(new BooleanSetting(name, defaultValue));
     }
+
+    // ---------------------------------------------------------------- settings
 
     protected final NumberSetting number(String name, double defaultValue, double min, double max, double step) {
         return addSetting(new NumberSetting(name, defaultValue, min, max, step));
@@ -127,11 +111,11 @@ public abstract class Module implements MinecraftInstance {
         return null;
     }
 
-    // ---------------------------------------------------------------- info
-
     public String getName() {
         return name;
     }
+
+    // ---------------------------------------------------------------- info
 
     public String getDescription() {
         return description;
@@ -145,6 +129,22 @@ public abstract class Module implements MinecraftInstance {
         return enabled;
     }
 
+    public final void setEnabled(boolean enabled) {
+        if (this.enabled == enabled) return;
+        this.enabled = enabled;
+        try {
+            if (enabled) {
+                Client.events().subscribe(this);
+                onEnable();
+            } else {
+                Client.events().unsubscribe(this);
+                onDisable();
+            }
+        } catch (Throwable t) {
+            Client.LOGGER.error("Error while {} {}", enabled ? "enabling" : "disabling", name, t);
+        }
+    }
+
     public int getKey() {
         return key;
     }
@@ -153,7 +153,9 @@ public abstract class Module implements MinecraftInstance {
         this.key = key;
     }
 
-    /** Call from the constructor to turn the module on when it has no saved state yet. */
+    /**
+     * Call from the constructor to turn the module on when it has no saved state yet.
+     */
     protected final void enableByDefault() {
         this.enabledByDefault = true;
     }
@@ -175,7 +177,9 @@ public abstract class Module implements MinecraftInstance {
         return hiddenByDefault;
     }
 
-    /** Hidden modules are not shown in the HUD module list. */
+    /**
+     * Hidden modules are not shown in the HUD module list.
+     */
     public boolean isHidden() {
         return hidden;
     }
@@ -184,12 +188,16 @@ public abstract class Module implements MinecraftInstance {
         this.hidden = hidden;
     }
 
-    /** Extra info shown next to the name in the HUD module list (e.g. the current mode), or {@code null}. */
+    /**
+     * Extra info shown next to the name in the HUD module list (e.g. the current mode), or {@code null}.
+     */
     public String getTag() {
         return null;
     }
 
-    /** Whether a world is loaded and the player exists. */
+    /**
+     * Whether a world is loaded and the player exists.
+     */
     protected final boolean inGame() {
         return mc.player != null && mc.level != null;
     }

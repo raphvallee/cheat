@@ -1,10 +1,6 @@
 package dev.cheat.client.config;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParseException;
+import com.google.gson.*;
 import dev.cheat.client.Client;
 import dev.cheat.client.module.Module;
 import dev.cheat.client.module.ModuleManager;
@@ -44,26 +40,68 @@ public final class ConfigManager {
             "com1", "com2", "com3", "com4", "com5", "com6", "com7", "com8", "com9",
             "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9");
     private static final DateTimeFormatter BROKEN_SUFFIX = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
-
-    public enum LoadResult { LOADED, NOT_FOUND, INVALID }
-
     private final Path directory;
     private final ModuleManager modules;
-    /** What this manager last wrote to each file, so an unchanged config is not rewritten. */
+    /**
+     * What this manager last wrote to each file, so an unchanged config is not rewritten.
+     */
     private final Map<Path, Written> written = new ConcurrentHashMap<>();
-
-    private record Written(String json, FileTime modified) {}
-
     public ConfigManager(Path directory, ModuleManager modules) {
         this.directory = directory;
         this.modules = modules;
     }
 
-    public Path getDirectory() {
-        return directory;
+    private static JsonObject object(JsonObject parent, String key) {
+        JsonElement element = parent.get(key);
+        return element != null && element.isJsonObject() ? element.getAsJsonObject() : new JsonObject();
+    }
+
+    private static boolean bool(JsonObject parent, String key, boolean fallback, Module module) {
+        JsonElement element = parent.get(key);
+        if (element == null) return fallback;
+        if (element.isJsonPrimitive() && element.getAsJsonPrimitive().isBoolean()) return element.getAsBoolean();
+        Client.LOGGER.warn("Ignoring invalid '{}' for {}", key, module.getName());
+        return fallback;
+    }
+
+    private static JsonObject read(Path file) {
+        try (Reader reader = Files.newBufferedReader(file)) {
+            JsonObject json = GSON.fromJson(reader, JsonObject.class);
+            if (json == null) throw new JsonParseException("empty file");
+            return json;
+        } catch (IOException | RuntimeException e) {
+            Client.LOGGER.error("Could not read config {}", file, e);
+            return null;
+        }
     }
 
     // ---------------------------------------------------------------- active config
+
+    private static void moveAside(Path file) {
+        String name = file.getFileName().toString();
+        String base = name.endsWith(".json") ? name.substring(0, name.length() - 5) : name;
+        Path target = file.resolveSibling(base + ".broken-" + LocalDateTime.now().format(BROKEN_SUFFIX) + ".json");
+        try {
+            Files.move(file, target);
+            Client.LOGGER.warn("Moved the unreadable config to {}; defaults are used instead", target);
+        } catch (IOException e) {
+            Client.LOGGER.error("Could not move the unreadable config {} aside", file, e);
+        }
+    }
+
+    private static FileTime modifiedTime(Path file) {
+        try {
+            return Files.getLastModifiedTime(file);
+        } catch (IOException e) {
+            return null;
+        }
+    }
+
+    // ---------------------------------------------------------------- named configs
+
+    public Path getDirectory() {
+        return directory;
+    }
 
     public void load() {
         Path file = directory.resolve("config.json");
@@ -79,8 +117,6 @@ public final class ConfigManager {
         return write(directory.resolve("config.json"), serialize());
     }
 
-    // ---------------------------------------------------------------- named configs
-
     public LoadResult load(String name) {
         Path file = named(name);
         if (!Files.isRegularFile(file)) return LoadResult.NOT_FOUND;
@@ -89,6 +125,8 @@ public final class ConfigManager {
         apply(json);
         return LoadResult.LOADED;
     }
+
+    // ---------------------------------------------------------------- (de)serialization
 
     public boolean save(String name) {
         return write(named(name), serialize());
@@ -99,10 +137,10 @@ public final class ConfigManager {
         if (!Files.isDirectory(dir)) return List.of();
         try (Stream<Path> files = Files.list(dir)) {
             return files.map(p -> p.getFileName().toString())
-                    .filter(n -> n.endsWith(".json") && !n.contains(".broken-"))
-                    .map(n -> n.substring(0, n.length() - 5))
-                    .sorted()
-                    .toList();
+                        .filter(n -> n.endsWith(".json") && !n.contains(".broken-"))
+                        .map(n -> n.substring(0, n.length() - 5))
+                        .sorted()
+                        .toList();
         } catch (IOException e) {
             return List.of();
         }
@@ -120,8 +158,6 @@ public final class ConfigManager {
         }
         return directory.resolve("configs").resolve(n + ".json");
     }
-
-    // ---------------------------------------------------------------- (de)serialization
 
     private JsonObject serialize() {
         JsonObject root = new JsonObject();
@@ -178,42 +214,6 @@ public final class ConfigManager {
         if (clickGui != null && !panels.isEmpty()) clickGui.panelsFromJson(panels);
     }
 
-    private static JsonObject object(JsonObject parent, String key) {
-        JsonElement element = parent.get(key);
-        return element != null && element.isJsonObject() ? element.getAsJsonObject() : new JsonObject();
-    }
-
-    private static boolean bool(JsonObject parent, String key, boolean fallback, Module module) {
-        JsonElement element = parent.get(key);
-        if (element == null) return fallback;
-        if (element.isJsonPrimitive() && element.getAsJsonPrimitive().isBoolean()) return element.getAsBoolean();
-        Client.LOGGER.warn("Ignoring invalid '{}' for {}", key, module.getName());
-        return fallback;
-    }
-
-    private static JsonObject read(Path file) {
-        try (Reader reader = Files.newBufferedReader(file)) {
-            JsonObject json = GSON.fromJson(reader, JsonObject.class);
-            if (json == null) throw new JsonParseException("empty file");
-            return json;
-        } catch (IOException | RuntimeException e) {
-            Client.LOGGER.error("Could not read config {}", file, e);
-            return null;
-        }
-    }
-
-    private static void moveAside(Path file) {
-        String name = file.getFileName().toString();
-        String base = name.endsWith(".json") ? name.substring(0, name.length() - 5) : name;
-        Path target = file.resolveSibling(base + ".broken-" + LocalDateTime.now().format(BROKEN_SUFFIX) + ".json");
-        try {
-            Files.move(file, target);
-            Client.LOGGER.warn("Moved the unreadable config to {}; defaults are used instead", target);
-        } catch (IOException e) {
-            Client.LOGGER.error("Could not move the unreadable config {} aside", file, e);
-        }
-    }
-
     private boolean write(Path file, JsonObject json) {
         String text = GSON.toJson(json);
         Written last = written.get(file);
@@ -246,11 +246,8 @@ public final class ConfigManager {
         }
     }
 
-    private static FileTime modifiedTime(Path file) {
-        try {
-            return Files.getLastModifiedTime(file);
-        } catch (IOException e) {
-            return null;
-        }
+    public enum LoadResult {LOADED, NOT_FOUND, INVALID}
+
+    private record Written(String json, FileTime modified) {
     }
 }

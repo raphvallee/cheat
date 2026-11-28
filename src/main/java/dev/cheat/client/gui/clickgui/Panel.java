@@ -132,7 +132,8 @@ public final class Panel {
         boolean used = false;
         for (ModuleButton moduleButton : buttons) {
             // Clicks outside the visible area still reach rows (with an impossible position) so they can reset state.
-            if (moduleButton.mouseClicked(inside ? mouseX : Double.NaN, inside ? mouseY : Double.NaN, button)) used = true;
+            if (moduleButton.mouseClicked(inside ? mouseX : Double.NaN, inside ? mouseY : Double.NaN, button))
+                used = true;
         }
         return used || inside;
     }

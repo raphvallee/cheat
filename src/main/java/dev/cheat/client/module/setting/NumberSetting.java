@@ -5,7 +5,9 @@ import com.google.gson.JsonPrimitive;
 
 import java.math.BigDecimal;
 
-/** A number in {@code [min, max]} snapped to {@code step}. Use step 1 for integers. */
+/**
+ * A number in {@code [min, max]} snapped to {@code step}. Use step 1 for integers.
+ */
 public final class NumberSetting extends Setting<Double> {
     private final double min;
     private final double max;
@@ -22,7 +24,9 @@ public final class NumberSetting extends Setting<Double> {
         set(defaultValue);
     }
 
-    /** Unit shown after the value, e.g. {@code "ms"} or {@code " blocks"}. */
+    /**
+     * Unit shown after the value, e.g. {@code "ms"} or {@code " blocks"}.
+     */
     public NumberSetting withSuffix(String suffix) {
         this.suffix = suffix;
         return this;
@@ -74,7 +78,9 @@ public final class NumberSetting extends Setting<Double> {
         return get();
     }
 
-    /** Position of the value in the range, 0-1 (used by sliders). */
+    /**
+     * Position of the value in the range, 0-1 (used by sliders).
+     */
     public double getPercent() {
         return (get() - min) / (max - min);
     }

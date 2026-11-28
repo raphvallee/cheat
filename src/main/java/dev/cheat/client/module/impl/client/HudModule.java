@@ -14,7 +14,9 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 
-/** Example: 2D overlay with {@link Render2DEvent}: watermark, enabled module list and coordinates. */
+/**
+ * Example: 2D overlay with {@link Render2DEvent}: watermark, enabled module list and coordinates.
+ */
 public final class HudModule extends Module {
     private final BooleanSetting watermark = bool("Watermark", true);
     private final BooleanSetting arrayList = bool("Module list", true);
@@ -27,6 +29,11 @@ public final class HudModule extends Module {
         super("HUD", "Shows client information on screen.", Category.CLIENT);
         setHidden(true);
         enableByDefault();
+    }
+
+    private static String label(Module module) {
+        String tag = module.getTag();
+        return tag == null ? module.getName() : module.getName() + " " + tag;
     }
 
     @Subscribe
@@ -63,9 +70,9 @@ public final class HudModule extends Module {
                 ? Comparator.comparingInt((Module m) -> RenderUtil.width(label(m))).reversed()
                 : Comparator.comparing(Module::getName, String.CASE_INSENSITIVE_ORDER);
         List<Module> shown = Client.modules().getModules().stream()
-                .filter(m -> m.isEnabled() && !m.isHidden())
-                .sorted(order)
-                .toList();
+                                   .filter(m -> m.isEnabled() && !m.isHidden())
+                                   .sorted(order)
+                                   .toList();
         int y = 2;
         int lineHeight = RenderUtil.fontHeight() + 2;
         for (int i = 0; i < shown.size(); i++) {
@@ -82,10 +89,5 @@ public final class HudModule extends Module {
             }
             y += lineHeight;
         }
-    }
-
-    private static String label(Module module) {
-        String tag = module.getTag();
-        return tag == null ? module.getName() : module.getName() + " " + tag;
     }
 }

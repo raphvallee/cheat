@@ -45,7 +45,9 @@ public final class KeyInputEvent extends CancellableEvent {
         return action == InputConstants.PRESS;
     }
 
-    /** Whether a screen (chat, inventory, ClickGUI, ...) was open when the key was pressed. */
+    /**
+     * Whether a screen (chat, inventory, ClickGUI, ...) was open when the key was pressed.
+     */
     public boolean isInScreen() {
         return inScreen;
     }

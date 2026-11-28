@@ -1,6 +1,8 @@
 package dev.cheat.client.event;
 
-/** Common handler priorities. Any int works; higher runs first. */
+/**
+ * Common handler priorities. Any int works; higher runs first.
+ */
 public final class Priority {
     public static final int HIGHEST = 200;
     public static final int HIGH = 100;
@@ -8,5 +10,6 @@ public final class Priority {
     public static final int LOW = -100;
     public static final int LOWEST = -200;
 
-    private Priority() {}
+    private Priority() {
+    }
 }

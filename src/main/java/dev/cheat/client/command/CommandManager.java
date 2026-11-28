@@ -1,12 +1,7 @@
 package dev.cheat.client.command;
 
 import dev.cheat.client.Client;
-import dev.cheat.client.command.impl.BindCommand;
-import dev.cheat.client.command.impl.ConfigCommand;
-import dev.cheat.client.command.impl.HelpCommand;
-import dev.cheat.client.command.impl.HideCommand;
-import dev.cheat.client.command.impl.SetCommand;
-import dev.cheat.client.command.impl.ToggleCommand;
+import dev.cheat.client.command.impl.*;
 import dev.cheat.client.util.ChatUtil;
 
 import java.util.ArrayList;
@@ -14,12 +9,16 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-/** Parses chat input starting with {@link #getPrefix()} and runs the matching command. */
+/**
+ * Parses chat input starting with {@link #getPrefix()} and runs the matching command.
+ */
 public final class CommandManager {
     private final List<Command> commands = new ArrayList<>();
     private String prefix = ".";
 
-    /** Add new commands here. */
+    /**
+     * Add new commands here.
+     */
     public void registerDefaults() {
         register(
                 new HelpCommand(),

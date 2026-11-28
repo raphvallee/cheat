@@ -28,19 +28,20 @@ import java.util.stream.Collectors;
  * last Minecraft token are cached in {@code sessionFile}, so the browser login is only needed once.
  */
 public final class MicrosoftAuth {
-    /** Public client id of the Minecraft launcher, accepted by the Xbox Live RPS ticket exchange. */
+    /**
+     * Public client id of the Minecraft launcher, accepted by the Xbox Live RPS ticket exchange.
+     */
     private static final String CLIENT_ID = "00000000402b5328";
     private static final String SCOPE = "service::user.auth.xboxlive.com::MBI_SSL";
     private static final Duration TOKEN_MARGIN = Duration.ofMinutes(5);
 
     private static final Gson GSON = new Gson();
     private static final HttpClient HTTP = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(30))
-            .build();
+                                                     .connectTimeout(Duration.ofSeconds(30))
+                                                     .build();
 
-    private MicrosoftAuth() {}
-
-    public record Session(String username, String uuid, String accessToken, String xuid) {}
+    private MicrosoftAuth() {
+    }
 
     /**
      * Returns a valid session, reusing or refreshing the cached one when possible.
@@ -86,8 +87,6 @@ public final class MicrosoftAuth {
                 cache.has("xuid") ? cache.get("xuid").getAsString() : "0");
     }
 
-    // ---- Microsoft account ----
-
     private static JsonObject deviceCode(Consumer<String> log) throws IOException, InterruptedException {
         JsonObject code = postForm("https://login.live.com/oauth20_connect.srf", Map.of(
                 "client_id", CLIENT_ID,
@@ -110,13 +109,16 @@ public final class MicrosoftAuth {
             if (token.has("access_token")) return token;
             String error = token.has("error") ? token.get("error").getAsString() : "unknown_error";
             switch (error) {
-                case "authorization_pending" -> {}
+                case "authorization_pending" -> {
+                }
                 case "slow_down" -> interval += 5;
                 default -> throw new AuthException("device code login failed: " + error);
             }
         }
         throw new AuthException("the device code expired before the login was completed");
     }
+
+    // ---- Microsoft account ----
 
     private static JsonObject refresh(String refreshToken) throws IOException, InterruptedException {
         JsonObject token = postFormRaw("https://login.live.com/oauth20_token.srf", Map.of(
@@ -129,8 +131,6 @@ public final class MicrosoftAuth {
         }
         return token;
     }
-
-    // ---- Xbox Live and Minecraft ----
 
     private static JsonObject minecraftLogin(String msaToken) throws IOException, InterruptedException {
         JsonObject xbl = postJson("https://user.auth.xboxlive.com/user/authenticate", """
@@ -148,8 +148,8 @@ public final class MicrosoftAuth {
         String accessToken = mc.get("access_token").getAsString();
 
         HttpResponse<String> profileResponse = send(HttpRequest.newBuilder(URI.create("https://api.minecraftservices.com/minecraft/profile"))
-                .header("Authorization", "Bearer " + accessToken)
-                .GET().build());
+                                                               .header("Authorization", "Bearer " + accessToken)
+                                                               .GET().build());
         if (profileResponse.statusCode() == 404) {
             throw new AuthException("this Microsoft account does not own Minecraft Java Edition");
         }
@@ -165,38 +165,42 @@ public final class MicrosoftAuth {
         return result;
     }
 
+    // ---- Xbox Live and Minecraft ----
+
     private static String xuid(JsonObject xsts) {
         JsonArray xui = xsts.getAsJsonObject("DisplayClaims").getAsJsonArray("xui");
         JsonObject claims = xui.get(0).getAsJsonObject();
         return claims.has("xid") ? claims.get("xid").getAsString() : null;
     }
 
-    // ---- HTTP ----
-
     private static JsonObject postForm(String url, Map<String, String> form) throws IOException, InterruptedException {
         return parse(send(formRequest(url, form)), url);
     }
 
-    /** Like {@link #postForm} but returns OAuth error bodies instead of throwing. */
+    // ---- HTTP ----
+
+    /**
+     * Like {@link #postForm} but returns OAuth error bodies instead of throwing.
+     */
     private static JsonObject postFormRaw(String url, Map<String, String> form) throws IOException, InterruptedException {
         return GSON.fromJson(send(formRequest(url, form)).body(), JsonObject.class);
     }
 
     private static HttpRequest formRequest(String url, Map<String, String> form) {
         String body = form.entrySet().stream()
-                .map(e -> URLEncoder.encode(e.getKey(), StandardCharsets.UTF_8) + "=" + URLEncoder.encode(e.getValue(), StandardCharsets.UTF_8))
-                .collect(Collectors.joining("&"));
+                          .map(e -> URLEncoder.encode(e.getKey(), StandardCharsets.UTF_8) + "=" + URLEncoder.encode(e.getValue(), StandardCharsets.UTF_8))
+                          .collect(Collectors.joining("&"));
         return HttpRequest.newBuilder(URI.create(url))
-                .header("Content-Type", "application/x-www-form-urlencoded")
-                .POST(HttpRequest.BodyPublishers.ofString(body))
-                .build();
+                          .header("Content-Type", "application/x-www-form-urlencoded")
+                          .POST(HttpRequest.BodyPublishers.ofString(body))
+                          .build();
     }
 
     private static JsonObject postJson(String url, String json) throws IOException, InterruptedException {
         HttpRequest.Builder request = HttpRequest.newBuilder(URI.create(url))
-                .header("Content-Type", "application/json")
-                .header("Accept", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(json));
+                                                 .header("Content-Type", "application/json")
+                                                 .header("Accept", "application/json")
+                                                 .POST(HttpRequest.BodyPublishers.ofString(json));
         HttpResponse<String> response = send(request.build());
         if (response.statusCode() == 401 && url.contains("xsts")) {
             JsonObject error = GSON.fromJson(response.body(), JsonObject.class);
@@ -223,8 +227,6 @@ public final class MicrosoftAuth {
         return GSON.fromJson(response.body(), JsonObject.class);
     }
 
-    // ---- cache ----
-
     private static JsonObject readCache(Path file) {
         try {
             return Files.isRegularFile(file) ? GSON.fromJson(Files.readString(file), JsonObject.class) : null;
@@ -232,6 +234,8 @@ public final class MicrosoftAuth {
             return null;
         }
     }
+
+    // ---- cache ----
 
     private static void writeCache(Path file, JsonObject data) throws IOException {
         Files.createDirectories(file.getParent());
@@ -243,6 +247,9 @@ public final class MicrosoftAuth {
             // Windows: the file lives in the user profile, which is already private.
         }
         Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+    }
+
+    public record Session(String username, String uuid, String accessToken, String xuid) {
     }
 
     private static final class AuthException extends IllegalStateException {

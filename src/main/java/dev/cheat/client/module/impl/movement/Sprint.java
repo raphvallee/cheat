@@ -8,7 +8,9 @@ import dev.cheat.client.module.Module;
 import dev.cheat.client.module.setting.BooleanSetting;
 import net.minecraft.client.player.LocalPlayer;
 
-/** Example: simplest possible module, reacting to {@link PlayerTickEvent}. */
+/**
+ * Example: simplest possible module, reacting to {@link PlayerTickEvent}.
+ */
 public final class Sprint extends Module {
     private final BooleanSetting omniSprint = bool("Omni Sprint", false);
     private final BooleanSetting sideSprint = bool("Side Sprint", false).visibleIf(omniSprint::get);
