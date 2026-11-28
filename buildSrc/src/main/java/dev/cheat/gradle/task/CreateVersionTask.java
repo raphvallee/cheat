@@ -50,7 +50,7 @@ public abstract class CreateVersionTask extends DefaultTask {
         Files.createDirectories(dir);
 
         JsonObject json;
-        try (Reader reader = Files.newBufferedReader(PatchJarTask.path(getVanillaVersionJson()))) {
+        try (Reader reader = Files.newBufferedReader(path(getVanillaVersionJson()))) {
             json = GSON.fromJson(reader, JsonObject.class);
         }
         json.addProperty("id", id);
@@ -58,7 +58,11 @@ public abstract class CreateVersionTask extends DefaultTask {
         try (Writer writer = Files.newBufferedWriter(dir.resolve(id + ".json"))) {
             GSON.toJson(json, writer);
         }
-        Files.copy(PatchJarTask.path(getClientJar()), dir.resolve(id + ".jar"), StandardCopyOption.REPLACE_EXISTING);
+        Files.copy(path(getClientJar()), dir.resolve(id + ".jar"), StandardCopyOption.REPLACE_EXISTING);
         getLogger().lifecycle("Created launcher version " + dir);
+    }
+
+    private static Path path(RegularFileProperty property) {
+        return property.get().getAsFile().toPath();
     }
 }

@@ -102,8 +102,9 @@ public final class MinecraftSetup {
             artifacts.add(lib.getAsJsonObject("downloads").getAsJsonObject("artifact"));
         }
         ExecutorService pool = Executors.newFixedThreadPool(8);
+        List<Future<Path>> futures = new ArrayList<>();
+        boolean done = false;
         try {
-            List<Future<Path>> futures = new ArrayList<>();
             for (JsonObject a : artifacts) {
                 futures.add(pool.submit(() -> Downloader.download(a.get("url").getAsString(),
                         root.resolve("libraries").resolve(a.get("path").getAsString()), a.get("sha1").getAsString(),
@@ -111,11 +112,12 @@ public final class MinecraftSetup {
             }
             List<Path> result = new ArrayList<>();
             for (Future<Path> f : futures) result.add(f.get());
+            done = true;
             return List.copyOf(result);
         } catch (Exception e) {
             throw new RuntimeException("Failed to download libraries", e);
         } finally {
-            pool.shutdown();
+            shutdown(pool, futures, done);
         }
     }
 
@@ -140,8 +142,9 @@ public final class MinecraftSetup {
                 assets.resolve("indexes").resolve(id + ".json"), index.get("sha1").getAsString());
         JsonObject objects = read(indexFile).getAsJsonObject("objects");
         ExecutorService pool = Executors.newFixedThreadPool(16);
+        List<Future<Path>> futures = new ArrayList<>();
+        boolean done = false;
         try {
-            List<Future<Path>> futures = new ArrayList<>();
             Set<String> seen = new HashSet<>();
             for (String key : objects.keySet()) {
                 JsonObject object = objects.getAsJsonObject(key);
@@ -153,12 +156,23 @@ public final class MinecraftSetup {
                         assets.resolve("objects").resolve(sub), hash, size)));
             }
             for (Future<Path> f : futures) f.get();
+            done = true;
         } catch (Exception e) {
             throw new IOException("Failed to download assets", e);
         } finally {
-            pool.shutdown();
+            shutdown(pool, futures, done);
         }
         return assets;
+    }
+
+    /** After a failure, stops the queued and running downloads instead of letting them finish. */
+    private static void shutdown(ExecutorService pool, List<? extends Future<?>> futures, boolean done) {
+        if (done) {
+            pool.shutdown();
+            return;
+        }
+        for (Future<?> f : futures) f.cancel(true);
+        pool.shutdownNow();
     }
 
     private static boolean hasAllObjects(Path assets, JsonObject objects) throws IOException {

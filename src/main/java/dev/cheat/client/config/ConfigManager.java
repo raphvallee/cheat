@@ -14,16 +14,18 @@ import dev.cheat.client.util.KeyUtil;
 
 import java.io.IOException;
 import java.io.Reader;
-import java.io.Writer;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.FileTime;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
@@ -47,6 +49,10 @@ public final class ConfigManager {
 
     private final Path directory;
     private final ModuleManager modules;
+    /** What this manager last wrote to each file, so an unchanged config is not rewritten. */
+    private final Map<Path, Written> written = new ConcurrentHashMap<>();
+
+    private record Written(String json, FileTime modified) {}
 
     public ConfigManager(Path directory, ModuleManager modules) {
         this.directory = directory;
@@ -208,21 +214,26 @@ public final class ConfigManager {
         }
     }
 
-    private static boolean write(Path file, JsonObject json) {
+    private boolean write(Path file, JsonObject json) {
+        String text = GSON.toJson(json);
+        Written last = written.get(file);
+        if (last != null && last.json.equals(text) && last.modified.equals(modifiedTime(file))) return true;
         Path tmp = null;
         try {
             Files.createDirectories(file.getParent());
             tmp = Files.createTempFile(file.getParent(), file.getFileName().toString(), ".tmp");
-            try (Writer writer = Files.newBufferedWriter(tmp)) {
-                GSON.toJson(json, writer);
-            }
+            Files.writeString(tmp, text);
             try {
                 Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
             } catch (AtomicMoveNotSupportedException e) {
                 Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING);
             }
+            FileTime modified = modifiedTime(file);
+            if (modified != null) written.put(file, new Written(text, modified));
+            else written.remove(file);
             return true;
         } catch (IOException e) {
+            written.remove(file);
             Client.LOGGER.error("Could not save config {}", file, e);
             return false;
         } finally {
@@ -232,6 +243,14 @@ public final class ConfigManager {
                 } catch (IOException ignored) {
                 }
             }
+        }
+    }
+
+    private static FileTime modifiedTime(Path file) {
+        try {
+            return Files.getLastModifiedTime(file);
+        } catch (IOException e) {
+            return null;
         }
     }
 }
