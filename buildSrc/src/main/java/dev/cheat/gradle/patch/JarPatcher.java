@@ -7,6 +7,7 @@ import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
 
+import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -16,6 +17,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -29,28 +31,32 @@ import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
 
 /**
- * Builds the client jar: vanilla jar + bytecode hooks + client classes/resources, minus Mojang's signature.
+ * Builds the client jar in two steps: {@link #patchVanilla} applies the bytecode hooks to the vanilla jar and drops
+ * Mojang's signature, then {@link #merge} adds the client classes/resources and a manifest. Only the merge reads the
+ * client output, so editing client code does not re-patch the game.
  */
 public final class JarPatcher {
+    private static final int BUFFER = 1 << 16;
+
     private JarPatcher() {}
 
     /**
-     * @param vanillaJar  the untouched Mojang client jar
-     * @param clientRoots compiled client classes and resources (directories)
-     * @param libraries   game libraries, used to resolve the class hierarchy for frame computation
-     * @param jdkHome     JDK the game runs on, used to resolve JDK classes, or {@code null} for the build's JDK
-     * @param output      jar to write
-     * @param hooksClass  internal name of the hooks class, e.g. {@code dev/cheat/client/hook/Hooks}
-     * @param injections  every injection to apply
-     * @param log         progress output
+     * @param vanillaJar the untouched Mojang client jar
+     * @param hooksFile  compiled hooks class, used to check that every hook exists with the expected signature
+     * @param libraries  game libraries, used to resolve the class hierarchy for frame computation
+     * @param jdkHome    JDK the game runs on, used to resolve JDK classes, or {@code null} for the build's JDK
+     * @param output     jar to write: the vanilla files with the hooks applied, without manifest or signature
+     * @param hooksClass internal name of the hooks class, e.g. {@code dev/cheat/client/hook/Hooks}
+     * @param injections every injection to apply
+     * @param log        progress output
      */
-    public static void patch(Path vanillaJar, List<Path> clientRoots, List<Path> libraries, Path jdkHome, Path output,
-                             String hooksClass, List<Injection> injections, Consumer<String> log) throws IOException {
+    public static void patchVanilla(Path vanillaJar, Path hooksFile, List<Path> libraries, Path jdkHome, Path output,
+                                    String hooksClass, List<Injection> injections, Consumer<String> log) throws IOException {
         injections.forEach(Injection::validate);
 
         Map<String, byte[]> vanilla = new LinkedHashMap<>();
         try (ZipFile zip = new ZipFile(vanillaJar.toFile())) {
-            for (ZipEntry entry : java.util.Collections.list(zip.entries())) {
+            for (ZipEntry entry : Collections.list(zip.entries())) {
                 if (entry.isDirectory() || isSignatureOrManifest(entry.getName())) continue;
                 try (InputStream in = zip.getInputStream(entry)) {
                     vanilla.put(entry.getName(), in.readAllBytes());
@@ -58,26 +64,10 @@ public final class JarPatcher {
             }
         }
 
-        Map<String, byte[]> client = new LinkedHashMap<>();
-        for (Path root : clientRoots) {
-            if (!Files.isDirectory(root)) continue;
-            try (Stream<Path> files = Files.walk(root)) {
-                for (Path file : (Iterable<Path>) files.filter(Files::isRegularFile)::iterator) {
-                    String name = root.relativize(file).toString().replace('\\', '/');
-                    if (isSignatureOrManifest(name)) {
-                        throw new IllegalStateException("Client file " + name + " is not allowed: the patched jar"
-                                + " writes its own manifest and must not be signed");
-                    }
-                    if (vanilla.containsKey(name)) {
-                        throw new IllegalStateException("Client file " + name + " would overwrite a vanilla file");
-                    }
-                    client.put(name, Files.readAllBytes(file));
-                }
-            }
+        if (hooksFile == null || !Files.isRegularFile(hooksFile)) {
+            throw new IllegalStateException("Hooks class " + hooksClass + " was not compiled");
         }
-
-        byte[] hooksBytes = client.get(hooksClass + ".class");
-        if (hooksBytes == null) throw new IllegalStateException("Hooks class " + hooksClass + " was not compiled");
+        byte[] hooksBytes = Files.readAllBytes(hooksFile);
         Set<String> hookMethods = staticMethods(hooksBytes);
 
         Map<String, List<Injection>> byOwner = new LinkedHashMap<>();
@@ -86,7 +76,7 @@ public final class JarPatcher {
         List<String> errors = new ArrayList<>();
         try (ClassHierarchy hierarchy = new ClassHierarchy(name -> {
             byte[] b = vanilla.get(name + ".class");
-            return b != null ? b : client.get(name + ".class");
+            return b != null ? b : name.equals(hooksClass) ? hooksBytes : null;
         }, libraries, jdkHome)) {
             for (Map.Entry<String, List<Injection>> e : byOwner.entrySet()) {
                 String owner = e.getKey();
@@ -142,23 +132,81 @@ public final class JarPatcher {
             throw new IllegalStateException("Patching failed:\n  " + String.join("\n  ", errors));
         }
 
-        Files.createDirectories(output.getParent());
-        Path tmp = output.resolveSibling(output.getFileName() + ".tmp");
-        try (OutputStream fos = Files.newOutputStream(tmp); ZipOutputStream out = new ZipOutputStream(fos)) {
-            Set<String> written = new HashSet<>();
-            written.add("META-INF/MANIFEST.MF");
-            out.putNextEntry(new ZipEntry("META-INF/MANIFEST.MF"));
-            out.write("Manifest-Version: 1.0\r\nMain-Class: net.minecraft.client.main.Main\r\n\r\n"
-                    .getBytes(StandardCharsets.UTF_8));
-            out.closeEntry();
-            for (Map<String, byte[]> map : List.of(vanilla, client)) {
-                for (Map.Entry<String, byte[]> entry : map.entrySet()) {
-                    if (!written.add(entry.getKey())) continue;
-                    out.putNextEntry(new ZipEntry(entry.getKey()));
-                    out.write(entry.getValue());
-                    out.closeEntry();
+        writeJar(output, out -> {
+            for (Map.Entry<String, byte[]> entry : vanilla.entrySet()) {
+                out.putNextEntry(new ZipEntry(entry.getKey()));
+                out.write(entry.getValue());
+                out.closeEntry();
+            }
+        });
+        log.accept("Wrote " + output + " (" + injections.size() + " injections)");
+    }
+
+    /**
+     * @param patchedJar  jar written by {@link #patchVanilla}
+     * @param clientRoots compiled client classes and resources (directories)
+     * @param output      runnable client jar to write
+     * @param log         progress output
+     */
+    public static void merge(Path patchedJar, List<Path> clientRoots, Path output, Consumer<String> log) throws IOException {
+        try (ZipFile zip = new ZipFile(patchedJar.toFile())) {
+            List<? extends ZipEntry> vanillaEntries = Collections.list(zip.entries());
+            Set<String> vanilla = new HashSet<>();
+            for (ZipEntry entry : vanillaEntries) vanilla.add(entry.getName());
+
+            Map<String, Path> client = new LinkedHashMap<>();
+            for (Path root : clientRoots) {
+                if (!Files.isDirectory(root)) continue;
+                try (Stream<Path> files = Files.walk(root)) {
+                    for (Path file : (Iterable<Path>) files.filter(Files::isRegularFile)::iterator) {
+                        String name = root.relativize(file).toString().replace('\\', '/');
+                        if (isSignatureOrManifest(name)) {
+                            throw new IllegalStateException("Client file " + name + " is not allowed: the patched jar"
+                                    + " writes its own manifest and must not be signed");
+                        }
+                        if (vanilla.contains(name)) {
+                            throw new IllegalStateException("Client file " + name + " would overwrite a vanilla file");
+                        }
+                        client.putIfAbsent(name, file);
+                    }
                 }
             }
+
+            writeJar(output, out -> {
+                out.putNextEntry(new ZipEntry("META-INF/MANIFEST.MF"));
+                out.write("Manifest-Version: 1.0\r\nMain-Class: net.minecraft.client.main.Main\r\n\r\n"
+                        .getBytes(StandardCharsets.UTF_8));
+                out.closeEntry();
+                for (ZipEntry entry : vanillaEntries) {
+                    out.putNextEntry(new ZipEntry(entry.getName()));
+                    try (InputStream in = zip.getInputStream(entry)) {
+                        in.transferTo(out);
+                    }
+                    out.closeEntry();
+                }
+                for (Map.Entry<String, Path> entry : client.entrySet()) {
+                    out.putNextEntry(new ZipEntry(entry.getKey()));
+                    Files.copy(entry.getValue(), out);
+                    out.closeEntry();
+                }
+            });
+            log.accept("Wrote " + output + " (" + client.size() + " client files)");
+        }
+    }
+
+    private interface JarContent {
+        void write(ZipOutputStream out) throws IOException;
+    }
+
+    private static void writeJar(Path output, JarContent content) throws IOException {
+        Files.createDirectories(output.getParent());
+        Path tmp = output.resolveSibling(output.getFileName() + ".tmp");
+        try (OutputStream fos = new BufferedOutputStream(Files.newOutputStream(tmp), BUFFER);
+             ZipOutputStream out = new ZipOutputStream(fos)) {
+            content.write(out);
+        } catch (IOException | RuntimeException e) {
+            Files.deleteIfExists(tmp);
+            throw e;
         }
         try {
             Files.move(tmp, output, StandardCopyOption.REPLACE_EXISTING);
@@ -166,7 +214,6 @@ public final class JarPatcher {
             Files.deleteIfExists(tmp);
             throw new IOException("Cannot replace " + output + ". Is the game still running? Close it and build again.", e);
         }
-        log.accept("Wrote " + output + " (" + injections.size() + " injections, " + client.size() + " client files)");
     }
 
     private static boolean isSignatureOrManifest(String name) {

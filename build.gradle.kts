@@ -1,7 +1,9 @@
 import dev.cheat.gradle.MinecraftSetup
+import dev.cheat.gradle.patch.GamePatches
 import dev.cheat.gradle.task.CreateVersionTask
 import dev.cheat.gradle.task.InstallClientTask
-import dev.cheat.gradle.task.PatchJarTask
+import dev.cheat.gradle.task.MergeJarTask
+import dev.cheat.gradle.task.PatchVanillaTask
 import java.util.UUID
 
 plugins {
@@ -59,13 +61,24 @@ tasks.processResources {
 // The plain jar is not useful on its own; the patched game jar is the real artifact.
 tasks.jar { enabled = false }
 
-val patchJar = tasks.register<PatchJarTask>("patchJar") {
+val gameLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(25) }
+
+val patchVanilla = tasks.register<PatchVanillaTask>("patchVanilla") {
     group = "client"
-    description = "Applies the bytecode hooks to the vanilla jar and merges the client classes into it."
+    description = "Applies the bytecode hooks to the vanilla jar and removes Mojang's signature."
     vanillaJar = mc.clientJar.toFile()
-    clientFiles.from(sourceSets.main.map { it.output })
+    hooksClass.from(sourceSets.main.flatMap { set -> set.java.classesDirectory.map { it.file("${GamePatches.HOOKS}.class") } })
     libraries.from(mc.libraries)
-    jdkHome = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(25) }.map { it.metadata.installationPath }
+    jdkHome = gameLauncher.map { it.metadata.installationPath }
+    jdkVersion = gameLauncher.map { "${it.metadata.vendor} ${it.metadata.javaRuntimeVersion}" }
+    outputJar = layout.buildDirectory.file("libs/patched-vanilla-$mcVersion.jar")
+}
+
+val patchJar = tasks.register<MergeJarTask>("patchJar") {
+    group = "client"
+    description = "Merges the client classes and resources into the patched vanilla jar."
+    patchedJar = patchVanilla.flatMap { it.outputJar }
+    clientFiles.from(sourceSets.main.map { it.output })
     outputJar = layout.buildDirectory.file("libs/$clientVersionId.jar")
 }
 
@@ -92,10 +105,9 @@ tasks.register<InstallClientTask>("installClient") {
 tasks.register<JavaExec>("runClient") {
     group = "client"
     description = "Starts the patched client in an offline dev session with run/ as game directory."
-    dependsOn(patchJar)
-    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(25) }
+    javaLauncher = gameLauncher
     mainClass = mc.mainClass()
-    classpath(patchJar.flatMap { it.outputJar }, mc.libraries)
+    classpath(patchVanilla.flatMap { it.outputJar }, sourceSets.main.map { it.output }, mc.libraries)
 
     val runDir = layout.projectDirectory.dir("run").asFile
     workingDir = runDir

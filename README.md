@@ -7,8 +7,9 @@ A client template for Minecraft **26.3** in the style of LiquidBounce. It is bui
 ## How it works
 
 1. Gradle downloads the vanilla 26.3 client jar and its libraries from Mojang and caches them in `~/.gradle/caches/client-template`. Since 26.1 the jar ships unobfuscated, so no mappings are needed.
-2. `patchJar` uses ASM to insert calls to `dev.cheat.client.hook.Hooks` into vanilla methods. The list of patches is in [`GamePatches.java`](buildSrc/src/main/java/dev/cheat/gradle/patch/GamePatches.java). It also removes Mojang's signature and merges the client classes into the jar.
-3. `createVersion` writes a standalone launcher version, `build/version/Cheat-26.3/` (a `.json` and a `.jar`).
+2. `patchVanilla` uses ASM to insert calls to `dev.cheat.client.hook.Hooks` into vanilla methods and removes Mojang's signature, writing `build/libs/patched-vanilla-26.3.jar`. The list of patches is in [`GamePatches.java`](buildSrc/src/main/java/dev/cheat/gradle/patch/GamePatches.java). It only reads `Hooks.class` from the client, so other client changes do not re-run it.
+3. `patchJar` merges the client classes and resources into the patched jar, writing `build/libs/Cheat-26.3.jar`. `runClient` skips this step and puts the patched jar and the compiled client classes on the classpath.
+4. `createVersion` writes a standalone launcher version, `build/version/Cheat-26.3/` (a `.json` and a `.jar`).
 
 If a patch target or a hook signature stops matching, for example after a Minecraft update, the build fails. The error names the missing method and gives the exact `Hooks` signature it expects.
 
@@ -26,6 +27,7 @@ export JAVA_HOME="/c/Program Files (x86)/Minecraft Launcher/runtime/java-runtime
 | Command | What it does |
 | --- | --- |
 | `./gradlew build` | Builds the patched jar and the launcher version folder |
+| `./gradlew patchVanilla` | Only applies the patches to the vanilla jar |
 | `./gradlew runClient` | Starts an offline dev session with `run/` as the game directory |
 | `./gradlew runClient -PquickWorld="New World"` | Same, but joins a world from `run/saves` directly |
 | `./gradlew installClient` | Copies the version into `.minecraft/versions` and adds a launcher installation. The first run keeps the original launcher profile files as `*.bak`; later runs never overwrite them. Close the launcher first |
@@ -55,6 +57,7 @@ The client name, version and Minecraft version are set in `gradle.properties`.
 ```
 buildSrc/                     Gradle side: Mojang downloads, ASM patcher, version/install tasks
   patch/GamePatches.java      every vanilla modification (add hooks here)
+  patch/JarPatcher.java       applies the patches, merges the client into the jar
 src/main/java/dev/cheat/client/
   Client.java                 startup / shutdown, managers
   hook/Hooks.java             entry points called by patched vanilla code -> events
