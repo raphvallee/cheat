@@ -50,6 +50,7 @@ public final class ModuleManager {
             if (getModule(module.getName()) != null) {
                 throw new IllegalArgumentException("Duplicate module name " + module.getName());
             }
+            module.captureDefaults();
             byClass.put(module.getClass(), module);
             modules.add(module);
         }

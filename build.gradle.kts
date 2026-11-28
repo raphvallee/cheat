@@ -65,6 +65,7 @@ val patchJar = tasks.register<PatchJarTask>("patchJar") {
     vanillaJar = mc.clientJar.toFile()
     clientFiles.from(sourceSets.main.map { it.output })
     libraries.from(mc.libraries)
+    jdkHome = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(25) }.map { it.metadata.installationPath }
     outputJar = layout.buildDirectory.file("libs/$clientVersionId.jar")
 }
 

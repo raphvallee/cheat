@@ -73,18 +73,23 @@ public final class ClickGuiScreen extends Screen {
         layoutScale = scale();
         int vw = virtualWidth();
         int vh = virtualHeight();
-        boolean outside = panels.stream().anyMatch(p -> p.x() < 0 || p.y() < 0
-                || p.x() + Theme.PANEL_WIDTH > vw || p.y() + Theme.HEADER_HEIGHT > vh);
-        if (!outside) return;
-        int x = MARGIN;
-        int y = MARGIN;
-        for (Panel panel : panels) {
-            if (x + Theme.PANEL_WIDTH > vw) {
-                x = MARGIN;
-                y += Theme.HEADER_HEIGHT + Theme.MODULE_HEIGHT * 3 + 10;
-            }
-            panel.moveTo(x, Math.max(0, Math.min(y, vh - Theme.HEADER_HEIGHT)));
-            x += Theme.PANEL_WIDTH + MARGIN;
+        boolean outside = panels.stream().anyMatch(p -> p.savedX() < 0 || p.savedY() < 0
+                || p.savedX() + Theme.PANEL_WIDTH > vw || p.savedY() + Theme.HEADER_HEIGHT > vh);
+        if (!outside) {
+            panels.forEach(Panel::clearPlacement);
+            return;
+        }
+        int columns = Math.max(1, (vw - MARGIN) / (Theme.PANEL_WIDTH + MARGIN));
+        int rows = (panels.size() + columns - 1) / columns;
+        int rowStep = Theme.HEADER_HEIGHT + Theme.MODULE_HEIGHT * 3 + 10;
+        if (rows > 1) {
+            int available = (vh - MARGIN - Theme.HEADER_HEIGHT) / (rows - 1);
+            rowStep = Math.max(Theme.HEADER_HEIGHT + 2, Math.min(rowStep, available));
+        }
+        for (int i = 0; i < panels.size(); i++) {
+            int x = MARGIN + (i % columns) * (Theme.PANEL_WIDTH + MARGIN);
+            int y = MARGIN + (i / columns) * rowStep;
+            panels.get(i).placeAt(x, Math.max(0, Math.min(y, vh - Theme.HEADER_HEIGHT)));
         }
     }
 
@@ -105,7 +110,11 @@ public final class ClickGuiScreen extends Screen {
         g.pose().pushMatrix();
         g.pose().scale(scale, scale);
 
-        for (Panel panel : panels) panel.render(g, mx, my, vw, vh);
+        Panel hovered = null;
+        for (int i = panels.size() - 1; i >= 0 && hovered == null; i--) {
+            if (panels.get(i).isOver(mx, my)) hovered = panels.get(i);
+        }
+        for (Panel panel : panels) panel.render(g, mx, my, panel == hovered, vw, vh);
 
         if (module.descriptions.isEnabled()) {
             String description = null;
@@ -160,9 +169,20 @@ public final class ClickGuiScreen extends Screen {
         double mx = toVirtual(mouseX);
         double my = toVirtual(mouseY);
         for (int i = panels.size() - 1; i >= 0; i--) {
-            if (panels.get(i).mouseScrolled(mx, my, scrollY)) return true;
+            Panel panel = panels.get(i);
+            if (panel.isOver(mx, my)) {
+                panel.mouseScrolled(mx, my, scrollY);
+                return true;
+            }
         }
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+    }
+
+    @Override
+    public void mouseMoved(double mouseX, double mouseY) {
+        double mx = toVirtual(mouseX);
+        double my = toVirtual(mouseY);
+        for (Panel panel : panels) panel.mouseMoved(mx, my);
     }
 
     @Override
@@ -192,6 +212,7 @@ public final class ClickGuiScreen extends Screen {
 
     @Override
     public void removed() {
+        panels.forEach(Panel::defocus);
         Client.config().save();
         super.removed();
     }

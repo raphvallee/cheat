@@ -3,7 +3,8 @@ package dev.cheat.client.event.events;
 import dev.cheat.client.event.Event;
 
 /**
- * Fired around {@code LocalPlayer.sendPosition()}, which sends the movement packet every tick.
+ * Fired around {@code LocalPlayer.sendChanges()}, which sends the movement packet every tick (only a rotation
+ * packet while riding).
  *
  * <p>In {@link State#PRE} the rotation and ground state can be changed: the server receives the new values
  * while the client camera keeps the real ones (silent rotations). Values are restored before {@link State#POST}.</p>

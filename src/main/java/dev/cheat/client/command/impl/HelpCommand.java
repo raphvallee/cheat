@@ -14,7 +14,13 @@ public final class HelpCommand extends Command {
         String prefix = Client.commands().getPrefix();
         ChatUtil.success(Client.NAME + " " + Client.VERSION + " commands:");
         for (Command command : Client.commands().getCommands()) {
-            ChatUtil.info(prefix + command.getName() + " " + command.getUsage() + " - " + command.getDescription());
+            StringBuilder line = new StringBuilder(prefix).append(command.getName());
+            if (!command.getUsage().isEmpty()) line.append(' ').append(command.getUsage());
+            line.append(" - ").append(command.getDescription());
+            if (!command.getAliases().isEmpty()) {
+                line.append(" (aliases: ").append(String.join(", ", command.getAliases())).append(')');
+            }
+            ChatUtil.info(line.toString());
         }
     }
 }

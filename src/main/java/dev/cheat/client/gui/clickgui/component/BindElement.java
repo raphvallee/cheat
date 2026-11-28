@@ -52,6 +52,11 @@ public final class BindElement extends GuiElement {
     }
 
     @Override
+    public void defocus() {
+        listening = false;
+    }
+
+    @Override
     public boolean keyPressed(int key) {
         if (!listening) return false;
         boolean clear = key == InputConstants.KEY_ESCAPE || key == InputConstants.KEY_BACKSPACE || key == InputConstants.KEY_DELETE;

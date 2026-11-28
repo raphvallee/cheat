@@ -36,7 +36,9 @@ public final class CommandManager {
     }
 
     public boolean isCommand(String message) {
-        return message.startsWith(prefix) && message.length() > prefix.length();
+        if (!message.startsWith(prefix) || message.length() <= prefix.length()) return false;
+        char first = message.charAt(prefix.length());
+        return Character.isLetter(first) || first == '?';
     }
 
     public void execute(String message) {

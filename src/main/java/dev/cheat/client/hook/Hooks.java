@@ -15,6 +15,7 @@ import dev.cheat.client.event.events.WorldChangeEvent;
 import dev.cheat.client.util.PacketUtil;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import net.minecraft.CrashReport;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.KeyboardHandler;
 import net.minecraft.client.Minecraft;
@@ -28,10 +29,13 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonInfo;
 import net.minecraft.client.main.GameConfig;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.PacketFlow;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundBundlePacket;
 
 /**
  * Static entry points called from patched vanilla code (see {@code buildSrc/.../GamePatches.java}).
@@ -47,6 +51,7 @@ public final class Hooks {
     private static Minecraft mc;
 
     // Values replaced during MotionEvent PRE, restored after the movement packet was sent.
+    private static boolean motionActive;
     private static boolean motionSpoofed;
     private static float realYaw;
     private static float realPitch;
@@ -69,6 +74,15 @@ public final class Hooks {
         if (Client.isReady()) Client.get().shutdown();
     }
 
+    public static void onCrash(Minecraft minecraft, CrashReport report) {
+        if (!Client.isReady()) return;
+        try {
+            Client.get().shutdown();
+        } catch (Throwable t) {
+            Client.LOGGER.error("Could not save the config while crashing", t);
+        }
+    }
+
     // ---------------------------------------------------------------- game loop
 
     public static void onTickPre(Minecraft minecraft) {
@@ -86,6 +100,10 @@ public final class Hooks {
 
     public static void onSetLevel(Minecraft minecraft, ClientLevel level) {
         if (Client.isReady()) Client.events().post(new WorldChangeEvent(level));
+    }
+
+    public static void onDisconnect(Minecraft minecraft, Screen nextScreen, boolean keepResourcePacks, boolean stopSound) {
+        if (Client.isReady() && minecraft.level != null) Client.events().post(new WorldChangeEvent(null));
     }
 
     public static void onClearLevel(Minecraft minecraft, Screen nextScreen) {
@@ -122,6 +140,7 @@ public final class Hooks {
 
     public static void onMotionPre(LocalPlayer player) {
         if (!Client.isReady()) return;
+        motionActive = true;
         realYaw = player.getYRot();
         realPitch = player.getXRot();
         realOnGround = player.onGround();
@@ -136,7 +155,8 @@ public final class Hooks {
     }
 
     public static void onMotionPost(LocalPlayer player) {
-        if (!Client.isReady()) return;
+        if (!Client.isReady() || !motionActive) return;
+        motionActive = false;
         if (motionSpoofed) {
             player.setYRot(realYaw);
             player.setXRot(realPitch);
@@ -158,6 +178,14 @@ public final class Hooks {
     public static boolean onPacketReceive(Connection connection, ChannelHandlerContext context, Packet<?> packet) {
         if (!Client.isReady() || connection.getReceiving() != PacketFlow.CLIENTBOUND) return false;
         return Client.events().post(new PacketReceiveEvent(packet)).isCancelled();
+    }
+
+    public static boolean onBundlePacket(ClientPacketListener listener, ClientboundBundlePacket bundle) {
+        if (!Client.isReady() || !mc.isSameThread()) return false;
+        for (Packet<? super ClientGamePacketListener> packet : bundle.subPackets()) {
+            if (!Client.events().post(new PacketReceiveEvent(packet)).isCancelled()) packet.handle(listener);
+        }
+        return true;
     }
 
     // ---------------------------------------------------------------- chat

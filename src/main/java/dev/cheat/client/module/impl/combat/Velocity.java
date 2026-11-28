@@ -37,7 +37,7 @@ public final class Velocity extends Module {
             Vec3 motion = packet.movement();
             double h = horizontal.getDouble() / 100.0;
             double v = vertical.getDouble() / 100.0;
-            // Packet events run on the network thread: touch the player on the client thread.
+            // Packet events usually run on the network thread: touch the player on the client thread.
             mc.execute(() -> player.setDeltaMovement(motion.x * h, motion.y * v, motion.z * h));
         }
     }

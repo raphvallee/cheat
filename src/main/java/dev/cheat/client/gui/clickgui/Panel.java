@@ -24,6 +24,7 @@ public final class Panel {
     private int dragOffsetY;
     private int scroll;
     private int visibleHeight;
+    private int[] placed;
 
     public Panel(Category category, ClickGuiModule.PanelState state, List<Module> modules) {
         this.category = category;
@@ -31,13 +32,13 @@ public final class Panel {
         for (Module module : modules) buttons.add(new ModuleButton(module));
     }
 
-    public void render(GuiGraphicsExtractor g, int mouseX, int mouseY, int screenWidth, int screenHeight) {
+    public void render(GuiGraphicsExtractor g, int mouseX, int mouseY, boolean hover, int screenWidth, int screenHeight) {
         if (dragging) {
             state.x = Math.max(0, Math.min(screenWidth - Theme.PANEL_WIDTH, mouseX - dragOffsetX));
             state.y = Math.max(0, Math.min(screenHeight - Theme.HEADER_HEIGHT, mouseY - dragOffsetY));
         }
-        int x = state.x;
-        int y = state.y;
+        int x = x();
+        int y = y();
         int w = Theme.PANEL_WIDTH;
 
         RenderUtil.rect(g, x, y, w, Theme.HEADER_HEIGHT, Theme.HEADER);
@@ -58,8 +59,8 @@ public final class Panel {
         RenderUtil.rect(g, x, top, w, visibleHeight, Theme.PANEL);
         g.enableScissor(x, top, x + w, top + visibleHeight);
         int rowY = top - scroll;
-        // Hide the hover state for rows scrolled out of view.
-        boolean mouseInside = RenderUtil.hovered(mouseX, mouseY, x, top, w, visibleHeight);
+        // Hide the hover state for rows scrolled out of view or covered by another panel.
+        boolean mouseInside = hover && RenderUtil.hovered(mouseX, mouseY, x, top, w, visibleHeight);
         int mx = mouseInside ? mouseX : Integer.MIN_VALUE;
         int my = mouseInside ? mouseY : Integer.MIN_VALUE;
         for (ModuleButton button : buttons) {
@@ -72,24 +73,35 @@ public final class Panel {
     }
 
     public int x() {
-        return state.x;
+        return placed != null ? placed[0] : state.x;
     }
 
     public int y() {
+        return placed != null ? placed[1] : state.y;
+    }
+
+    public int savedX() {
+        return state.x;
+    }
+
+    public int savedY() {
         return state.y;
     }
 
-    public void moveTo(int x, int y) {
-        state.x = x;
-        state.y = y;
+    public void placeAt(int x, int y) {
+        placed = new int[]{x, y};
+    }
+
+    public void clearPlacement() {
+        placed = null;
     }
 
     public boolean isOverHeader(double mouseX, double mouseY) {
-        return RenderUtil.hovered(mouseX, mouseY, state.x, state.y, Theme.PANEL_WIDTH, Theme.HEADER_HEIGHT);
+        return RenderUtil.hovered(mouseX, mouseY, x(), y(), Theme.PANEL_WIDTH, Theme.HEADER_HEIGHT);
     }
 
     public boolean isOverContent(double mouseX, double mouseY) {
-        return state.open && RenderUtil.hovered(mouseX, mouseY, state.x, state.y + Theme.HEADER_HEIGHT,
+        return state.open && RenderUtil.hovered(mouseX, mouseY, x(), y() + Theme.HEADER_HEIGHT,
                 Theme.PANEL_WIDTH, visibleHeight);
     }
 
@@ -99,7 +111,11 @@ public final class Panel {
 
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (isOverHeader(mouseX, mouseY)) {
+            defocus();
             if (button == GuiElement.LEFT) {
+                state.x = x();
+                state.y = y();
+                placed = null;
                 dragging = true;
                 dragOffsetX = (int) mouseX - state.x;
                 dragOffsetY = (int) mouseY - state.y;
@@ -108,7 +124,10 @@ public final class Panel {
             }
             return true;
         }
-        if (!state.open) return false;
+        if (!state.open) {
+            defocus();
+            return false;
+        }
         boolean inside = isOverContent(mouseX, mouseY);
         boolean used = false;
         for (ModuleButton moduleButton : buttons) {
@@ -123,6 +142,10 @@ public final class Panel {
         for (ModuleButton moduleButton : buttons) moduleButton.mouseReleased(mouseX, mouseY, button);
     }
 
+    public void mouseMoved(double mouseX, double mouseY) {
+        for (ModuleButton button : buttons) button.mouseMoved(mouseX, mouseY);
+    }
+
     public boolean mouseScrolled(double mouseX, double mouseY, double amount) {
         if (!isOverContent(mouseX, mouseY)) return false;
         scroll -= (int) Math.round(amount * 14);
@@ -130,6 +153,7 @@ public final class Panel {
     }
 
     public boolean keyPressed(int key) {
+        if (!state.open) return false;
         for (ModuleButton button : buttons) {
             if (button.keyPressed(key)) return true;
         }
@@ -137,6 +161,7 @@ public final class Panel {
     }
 
     public boolean charTyped(int codepoint) {
+        if (!state.open) return false;
         for (ModuleButton button : buttons) {
             if (button.charTyped(codepoint)) return true;
         }
@@ -144,10 +169,15 @@ public final class Panel {
     }
 
     public boolean isListening() {
+        if (!state.open) return false;
         for (ModuleButton button : buttons) {
             if (button.isListening()) return true;
         }
         return false;
+    }
+
+    public void defocus() {
+        for (ModuleButton button : buttons) button.defocus();
     }
 
     public String getDescription(double mouseX, double mouseY) {

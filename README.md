@@ -28,7 +28,7 @@ export JAVA_HOME="/c/Program Files (x86)/Minecraft Launcher/runtime/java-runtime
 | `./gradlew build` | Builds the patched jar and the launcher version folder |
 | `./gradlew runClient` | Starts an offline dev session with `run/` as the game directory |
 | `./gradlew runClient -PquickWorld="New World"` | Same, but joins a world from `run/saves` directly |
-| `./gradlew installClient` | Copies the version into `.minecraft/versions` and adds a launcher installation. Launcher profile files are backed up to `*.bak` first |
+| `./gradlew installClient` | Copies the version into `.minecraft/versions` and adds a launcher installation. The first run keeps the original launcher profile files as `*.bak`; later runs never overwrite them. Close the launcher first |
 | `./gradlew genSources` | Decompiles Minecraft into `build/minecraft-sources` so you can read it |
 
 The client name, version and Minecraft version are set in `gradle.properties`.
@@ -43,11 +43,12 @@ The client name, version and Minecraft version are set in `gradle.properties`.
 - Chat commands use the `.` prefix:
   - `.help`
   - `.t <module>` toggles a module.
-  - `.bind <module> <key|none>` sets or clears a key bind.
+  - `.bind <module> <key|none>` sets or clears a key bind (keyboard keys only).
   - `.set <module> [setting] [value]` lists or changes settings.
   - `.hide <module>` hides a module from the HUD list.
-  - `.config <save|load|list> [name]` manages named configs.
-- The config is stored in `<gameDir>/cheat/config.json`. It is saved when the GUI closes and when the game exits.
+  - `.config <save|load|list> [name]` manages named configs. Names are case-insensitive and use letters, digits, `_`, `-` and `.`. Loading a config replaces everything: values it does not contain go back to their defaults.
+  - A chat message is a command only when the `.` is followed by a letter, so `...` or `.5` are sent as normal chat.
+- The config is stored in `<gameDir>/cheat/config.json`. It is saved when the GUI closes, when the game exits and when it crashes. A config that cannot be read is renamed to `config.broken-<date>.json` and the defaults are used, so it is never overwritten.
 
 ## Layout
 
@@ -71,14 +72,14 @@ src/main/java/dev/cheat/client/
 | --- | --- | --- |
 | `TickEvent` (PRE/POST) | `Minecraft.tick` | every client tick |
 | `PlayerTickEvent` | `LocalPlayer.tick` | in world only, main module logic |
-| `MotionEvent` (PRE/POST) | `LocalPlayer.sendPosition` | yaw, pitch and onGround can be spoofed in PRE |
+| `MotionEvent` (PRE/POST) | `LocalPlayer.sendChanges` | yaw, pitch and onGround can be spoofed in PRE, also while riding |
 | `PacketSendEvent` | `Connection.send` | cancellable, client connection only |
-| `PacketReceiveEvent` | `Connection.channelRead0` | cancellable, **Netty thread** |
+| `PacketReceiveEvent` | `Connection.channelRead0` / `ClientPacketListener.handleBundlePacket` | cancellable, **Netty thread** (bundled packets: client thread) |
 | `KeyInputEvent` / `MouseInputEvent` | `KeyboardHandler.keyPress` / `MouseHandler.onButton` | cancellable |
 | `Render2DEvent` | `Hud.extractRenderState` | draw with `GuiGraphicsExtractor`, ARGB colors |
 | `Render3DEvent` | `Minecraft.renderFrame` | draw with `Gizmos` / `RenderUtil.box` in world coordinates |
 | `ChatSendEvent` | `ChatScreen.handleChatInput` | cancellable |
-| `WorldChangeEvent` | `Minecraft.setLevel` / `clearClientLevel` | level is `null` when leaving |
+| `WorldChangeEvent` | `Minecraft.setLevel` / `disconnect` / `clearClientLevel` | level is `null` when leaving |
 
 ## Adding a module
 

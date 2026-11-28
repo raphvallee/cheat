@@ -3,6 +3,7 @@ package dev.cheat.gradle.task;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.GradleException;
 import org.gradle.api.file.DirectoryProperty;
@@ -16,6 +17,7 @@ import org.gradle.work.DisableCachingByDefault;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -24,7 +26,7 @@ import java.util.stream.Stream;
 
 /**
  * Copies the generated version into the official launcher's {@code versions} folder and adds a launcher
- * installation for it. Existing profile files are backed up to {@code *.bak} before being changed.
+ * installation for it. The first time a profile file is changed, the original is backed up to {@code *.bak}.
  */
 @DisableCachingByDefault(because = "Writes outside the build directory")
 public abstract class InstallClientTask extends DefaultTask {
@@ -69,11 +71,13 @@ public abstract class InstallClientTask extends DefaultTask {
         JsonObject root;
         try (Reader reader = Files.newBufferedReader(file)) {
             root = GSON.fromJson(reader, JsonObject.class);
+        } catch (JsonParseException e) {
+            throw new GradleException("Cannot add the launcher installation: " + file + " is not valid JSON", e);
         }
         if (root == null) root = new JsonObject();
-        if (!root.has("profiles")) root.add("profiles", new JsonObject());
+        if (!root.has("profiles") || !root.get("profiles").isJsonObject()) root.add("profiles", new JsonObject());
         JsonObject profiles = root.getAsJsonObject("profiles");
-        JsonObject profile = profiles.has(id) ? profiles.getAsJsonObject(id) : new JsonObject();
+        JsonObject profile = profiles.get(id) instanceof JsonObject existing ? existing : new JsonObject();
         String now = Instant.now().toString();
         if (!profile.has("created")) profile.addProperty("created", now);
         profile.addProperty("lastUsed", now);
@@ -84,10 +88,22 @@ public abstract class InstallClientTask extends DefaultTask {
         profiles.add(id, profile);
 
         Path backup = file.resolveSibling(file.getFileName() + ".bak");
-        Files.copy(file, backup, StandardCopyOption.REPLACE_EXISTING);
-        try (Writer writer = Files.newBufferedWriter(file)) {
-            GSON.toJson(root, writer);
+        if (!Files.exists(backup)) Files.copy(file, backup, StandardCopyOption.COPY_ATTRIBUTES);
+
+        Path tmp = Files.createTempFile(file.getParent(), file.getFileName().toString(), ".tmp");
+        try {
+            try (Writer writer = Files.newBufferedWriter(tmp)) {
+                GSON.toJson(root, writer);
+            }
+            try {
+                Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            } catch (AtomicMoveNotSupportedException e) {
+                Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING);
+            }
+        } finally {
+            Files.deleteIfExists(tmp);
         }
-        getLogger().lifecycle("Added launcher installation '" + getProfileName().get() + "' to " + file.getFileName());
+        getLogger().lifecycle("Added launcher installation '" + getProfileName().get() + "' to " + file.getFileName()
+                + " (restart the launcher if it is open)");
     }
 }

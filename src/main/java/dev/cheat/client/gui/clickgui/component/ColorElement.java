@@ -24,9 +24,9 @@ public final class ColorElement extends SettingElement<ColorSetting> {
     private void sync() {
         int argb = setting.getArgb();
         float[] hsb = ColorUtil.toHsb(argb);
-        // Keep the hue while the color is gray/black, where it cannot be recovered from RGB.
+        // Keep the hue while the color is gray/black and the saturation while it is black: RGB cannot give them back.
         if (hsb[1] > 0 && hsb[2] > 0) hsba[0] = hsb[0] / 360f;
-        hsba[1] = hsb[1];
+        if (hsb[2] > 0) hsba[1] = hsb[1];
         hsba[2] = hsb[2];
         hsba[3] = (argb >>> 24) / 255f;
         lastSynced = argb;
@@ -40,7 +40,6 @@ public final class ColorElement extends SettingElement<ColorSetting> {
     @Override
     public void render(GuiGraphicsExtractor g, int mouseX, int mouseY) {
         if (setting.getArgb() != lastSynced) sync();
-        if (dragging >= 0) update(dragging, mouseX);
 
         RenderUtil.rect(g, x, y, width, height(), Theme.SETTINGS);
         if (RenderUtil.hovered(mouseX, mouseY, x, y, width, Theme.ROW_HEIGHT)) {
@@ -109,5 +108,15 @@ public final class ColorElement extends SettingElement<ColorSetting> {
     @Override
     public void mouseReleased(double mouseX, double mouseY, int button) {
         if (button == LEFT) dragging = -1;
+    }
+
+    @Override
+    public void mouseMoved(double mouseX, double mouseY) {
+        if (dragging >= 0) update(dragging, mouseX);
+    }
+
+    @Override
+    public void defocus() {
+        dragging = -1;
     }
 }

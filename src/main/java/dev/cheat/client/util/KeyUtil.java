@@ -9,6 +9,7 @@ import java.util.Map;
 public final class KeyUtil {
     /** Key code meaning "not bound". */
     public static final int NONE = InputConstants.UNKNOWN.getValue();
+    private static final int KEY_LIMIT = 512;
 
     private static final Map<String, String> ALIASES = Map.ofEntries(
             Map.entry("rshift", "right.shift"), Map.entry("lshift", "left.shift"),
@@ -28,13 +29,25 @@ public final class KeyUtil {
     }
 
     /** Parses names such as {@code r}, {@code f6}, {@code rshift}, {@code right.shift} or {@code key.keyboard.r}. */
-    public static int parse(String name) {
+    public static boolean isNone(String name) {
         String n = name.toLowerCase(Locale.ROOT).trim();
-        if (n.isEmpty() || n.equals("none") || n.equals("null")) return NONE;
+        return n.isEmpty() || n.equals("none") || n.equals("null");
+    }
+
+    public static boolean isValid(int key) {
+        return key == NONE || (key > 0 && key < KEY_LIMIT);
+    }
+
+    public static int parse(String name) {
+        if (isNone(name)) return NONE;
+        String n = name.toLowerCase(Locale.ROOT).trim();
         n = ALIASES.getOrDefault(n, n).replace('_', '.');
         if (!n.startsWith("key.")) n = "key.keyboard." + n;
+        if (!n.startsWith("key.keyboard.")) return NONE;
         try {
-            return InputConstants.getKey(n).getValue();
+            InputConstants.Key key = InputConstants.getKey(n);
+            if (key.getType() != InputConstants.Type.KEYBOARD || !isValid(key.getValue())) return NONE;
+            return key.getValue();
         } catch (RuntimeException e) {
             return NONE;
         }

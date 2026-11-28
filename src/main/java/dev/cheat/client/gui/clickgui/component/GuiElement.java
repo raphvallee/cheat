@@ -35,6 +35,12 @@ public abstract class GuiElement {
     public void mouseReleased(double mouseX, double mouseY, int button) {
     }
 
+    public void mouseMoved(double mouseX, double mouseY) {
+    }
+
+    public void defocus() {
+    }
+
     /** @return true when the key was used (e.g. while waiting for a bind) */
     public boolean keyPressed(int key) {
         return false;

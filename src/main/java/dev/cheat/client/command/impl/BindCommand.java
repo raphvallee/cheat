@@ -16,7 +16,7 @@ public final class BindCommand extends Command {
         if (args.length != 2) throw CommandException.usage();
         Module module = Modules.find(args[0]);
         int key = KeyUtil.parse(args[1]);
-        if (key == KeyUtil.NONE && !args[1].equalsIgnoreCase("none")) {
+        if (key == KeyUtil.NONE && !KeyUtil.isNone(args[1])) {
             throw new CommandException("Unknown key '" + args[1] + "'.");
         }
         module.setKey(key);

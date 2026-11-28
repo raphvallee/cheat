@@ -9,8 +9,6 @@ import java.util.function.Consumer;
 
 /**
  * A configurable module value, shown in the ClickGUI, editable with {@code .set} and saved in the config.
- *
- * @param <T> value type
  */
 public abstract class Setting<T> {
     private final String name;

@@ -26,10 +26,17 @@ public final class SetCommand extends Command {
             return;
         }
         // Setting names may contain spaces: the last argument is the value, the rest is the name.
-        if (args.length < 3) throw CommandException.usage();
+        Setting<?> shown = module.getSetting(String.join(" ", Arrays.copyOfRange(args, 1, args.length)));
+        if (shown != null) {
+            ChatUtil.info(module.getName() + " " + shown.getName() + ": " + shown.display());
+            return;
+        }
         String name = String.join(" ", Arrays.copyOfRange(args, 1, args.length - 1));
-        Setting<?> setting = module.getSetting(name);
-        if (setting == null) throw new CommandException(module.getName() + " has no setting '" + name + "'.");
+        Setting<?> setting = args.length < 3 ? null : module.getSetting(name);
+        if (setting == null) {
+            String wanted = args.length < 3 ? args[1] : name;
+            throw new CommandException(module.getName() + " has no setting '" + wanted + "'.");
+        }
         try {
             setting.parse(args[args.length - 1]);
         } catch (IllegalArgumentException e) {

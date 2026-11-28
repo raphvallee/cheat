@@ -78,16 +78,21 @@ public final class ModuleButton extends GuiElement {
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (RenderUtil.hovered(mouseX, mouseY, x, y, width, Theme.MODULE_HEIGHT)) {
+            if (button != LEFT && button != RIGHT) return false;
+            defocus();
             if (button == LEFT) module.toggle();
-            else if (button == RIGHT) expanded = !expanded;
-            else return false;
+            else expanded = !expanded;
             return true;
         }
-        if (!expanded) return false;
+        if (!expanded) {
+            defocus();
+            return false;
+        }
         boolean used = false;
         for (GuiElement child : children) {
             // Every child gets the click so that e.g. a listening bind row can cancel when clicking elsewhere.
-            if (child.isVisible() && child.mouseClicked(mouseX, mouseY, button)) used = true;
+            if (!child.isVisible()) child.defocus();
+            else if (child.mouseClicked(mouseX, mouseY, button)) used = true;
         }
         return used;
     }
@@ -95,6 +100,19 @@ public final class ModuleButton extends GuiElement {
     @Override
     public void mouseReleased(double mouseX, double mouseY, int button) {
         for (GuiElement child : children) child.mouseReleased(mouseX, mouseY, button);
+    }
+
+    @Override
+    public void mouseMoved(double mouseX, double mouseY) {
+        if (!expanded) return;
+        for (GuiElement child : children) {
+            if (child.isVisible()) child.mouseMoved(mouseX, mouseY);
+        }
+    }
+
+    @Override
+    public void defocus() {
+        for (GuiElement child : children) child.defocus();
     }
 
     @Override
