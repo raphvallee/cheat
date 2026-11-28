@@ -30,6 +30,8 @@ export JAVA_HOME="/c/Program Files (x86)/Minecraft Launcher/runtime/java-runtime
 | `./gradlew patchVanilla` | Only applies the patches to the vanilla jar |
 | `./gradlew runClient` | Starts an offline dev session with `run/` as the game directory |
 | `./gradlew runClient -PquickWorld="New World"` | Same, but joins a world from `run/saves` directly |
+| `./gradlew runClientOnline` | Starts a dev session logged in with your Microsoft account, so you can join online-mode servers. The first run prints a code to enter at microsoft.com/link. The login is cached in `~/.gradle/caches/client-template/auth/microsoft.json`, delete it to log out or switch accounts |
+| `./gradlew runClientOnline -PquickServer=host:port` | Same, but joins that server directly |
 | `./gradlew installClient` | Copies the version into `.minecraft/versions` and adds a launcher installation. The first run keeps the original launcher profile files as `*.bak`; later runs never overwrite them. Close the launcher first |
 | `./gradlew genSources` | Decompiles Minecraft into `build/minecraft-sources` so you can read it |
 
